@@ -1,0 +1,1201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>show</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' stroke='%231a1a1a' stroke-width='2' fill='none'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='sans-serif' font-size='20' font-weight='700' fill='%231a1a1a'%3ES%3C/text%3E%3C/svg%3E">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #fff; --bg2: #f5f5f5; --bg3: #eee; --text: #1a1a1a; --text2: #666; --text3: #999;
+    --border: #ddd; --border2: #eee; --accent: #3b82f6; --danger: #d44;
+  }
+  .dark {
+    --bg: #0a0a0a; --bg2: #141414; --bg3: #1a1a1a; --text: #e0e0e0; --text2: #888; --text3: #555;
+    --border: #2a2a2a; --border2: #1a1a1a; --accent: #3b82f6; --danger: #d44;
+  }
+  body { font-family: 'IBM Plex Mono', monospace; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.3s, color 0.3s; }
+
+  /* ===== LANDING ===== */
+  .landing { display: flex; align-items: center; justify-content: center; min-height: 100vh; flex-direction: column; gap: 24px; padding: 40px; }
+  .landing.hidden { display: none; }
+  .drop-zone { border: 1.5px dashed var(--border); padding: 60px 80px; text-align: center; transition: border-color 0.2s, background 0.2s; cursor: pointer; position: relative; background: var(--bg2); }
+  .drop-zone.dragover { border-color: var(--accent); background: rgba(59,130,246,0.06); }
+  .drop-zone-title { font-size: 15px; font-weight: 500; margin-bottom: 12px; color: var(--text2); }
+  .drop-zone-btn { display: inline-block; padding: 10px 28px; border: 1.5px solid var(--text); background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 13px; cursor: pointer; transition: all 0.15s; color: var(--text); }
+  .drop-zone-btn:hover { background: var(--text); color: var(--bg); }
+  .drop-zone-hint { font-size: 12px; color: var(--text3); margin-top: 12px; }
+  .drop-zone-hint .cursor { animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .drop-zone-formats { font-size: 11px; color: var(--border); margin-top: 16px; letter-spacing: 1px; }
+
+  /* ===== GALLERY VIEW ===== */
+  .gallery-view { display: none; }
+  .gallery-view.visible { display: block; }
+
+  /* Header */
+  .header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border2); position: sticky; top: 0; background: var(--bg); z-index: 50; flex-wrap: wrap; }
+  .header-search { flex: 1; max-width: 280px; }
+  .header-search input { width: 100%; padding: 6px 0; border: none; border-bottom: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; font-size: 12px; outline: none; background: transparent; color: var(--text); }
+  .header-search input:focus { border-bottom-color: var(--accent); }
+  .header-count { font-size: 11px; color: var(--text3); white-space: nowrap; }
+  .header-sort { display: flex; align-items: center; gap: 6px; }
+  .sort-label { font-size: 11px; color: var(--text3); white-space: nowrap; }
+  .header-sort select { padding: 5px 8px; border: 1px solid var(--border); background: var(--bg); font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text); cursor: pointer; outline: none; border-radius: 0; -webkit-appearance: none; appearance: none; padding-right: 20px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; }
+  .sort-dir { padding: 5px 8px; border: 1px solid var(--border); background: var(--bg); font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; color: var(--text); transition: all 0.15s; }
+  .sort-dir:hover { border-color: var(--text); }
+  .sort-random { padding: 5px 10px; border: 1px solid var(--border); background: var(--bg); font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; color: var(--text2); transition: all 0.15s; }
+  .sort-random:hover { border-color: var(--accent); color: var(--accent); }
+  .dark .header-sort select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E"); }
+  .header-actions { display: flex; gap: 6px; margin-left: auto; }
+  .btn { padding: 5px 12px; border: 1px solid var(--border); background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; transition: all 0.15s; color: var(--text); }
+  .btn:hover { border-color: var(--text); }
+  .btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { opacity: 0.85; }
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+  .btn.danger:hover { background: var(--danger); color: #fff; }
+
+  /* Type filter */
+  .type-filter { display: flex; gap: 0; margin-left: 4px; }
+  .type-filter .tf-btn { padding: 5px 10px; border: 1px solid var(--border); background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; color: var(--text2); transition: all 0.15s; margin-left: -1px; }
+  .type-filter .tf-btn:first-child { margin-left: 0; }
+  .type-filter .tf-btn:hover { border-color: var(--text); }
+  .type-filter .tf-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  /* Selection bar */
+  .sel-bar { display: none; align-items: center; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--accent); background: var(--bg2); font-size: 12px; position: fixed; bottom: 0; left: 0; right: 0; z-index: 80; box-shadow: 0 -4px 16px rgba(0,0,0,0.08); }
+  .sel-bar.visible { display: flex; flex-wrap: wrap; }
+  body.has-sel-bar { padding-bottom: 52px; }
+  .sel-count { color: var(--accent); font-weight: 500; }
+
+  /* Grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px; padding: 4px; align-items: start; }
+  .thumb { position: relative; overflow: hidden; cursor: pointer; background: var(--bg2); transition: transform 0.2s, box-shadow 0.2s; min-height: 0; }
+  .thumb.image-thumb { aspect-ratio: 1; }
+  .thumb.video-thumb { max-height: 400px; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; transition: opacity 0.2s; display: block; }
+  .thumb:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+  .thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; transform: translateY(-4px); z-index: 2; }
+  .btn:focus-visible, .tf-btn:focus-visible, .sort-dir:focus-visible, .sort-random:focus-visible, .drop-zone-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .drop-zone:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .header-sort select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .modal .nav:focus-visible, .modal .zoom-btn:focus-visible, .modal .close:focus-visible, .modal .slideshow-bar .ss-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .thumb .name { position: absolute; bottom: 0; left: 0; right: 0; padding: 3px 6px; background: rgba(255,255,255,0.92); font-size: 10px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dark .thumb .name { background: rgba(0,0,0,0.85); color: #aaa; }
+  .thumb .badge { position: absolute; top: 6px; right: 6px; min-width: 22px; height: 22px; background: var(--bg3); color: var(--text3); font-size: 11px; font-weight: 600; display: none; align-items: center; justify-content: center; transition: all 0.15s; padding: 0 4px; }
+  .sel-mode .thumb .badge { display: flex; }
+  .thumb.selected .badge { display: flex; background: var(--accent); color: #fff; }
+  .thumb.selected { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .thumb .type-icon { position: absolute; top: 6px; left: 6px; padding: 2px 5px; background: rgba(0,0,0,0.55); color: #fff; font-size: 9px; border-radius: 2px; pointer-events: none; }
+  .thumb .dur { position: absolute; bottom: 24px; right: 6px; padding: 2px 6px; background: rgba(0,0,0,0.7); color: #fff; font-size: 10px; }
+  .thumb .play-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+  .thumb:hover .play-icon { opacity: 1; }
+  .thumb .play-icon::after { content: ''; width: 0; height: 0; border-left: 14px solid #fff; border-top: 8px solid transparent; border-bottom: 8px solid transparent; margin-left: 3px; }
+
+  /* Modal (image viewer) */
+  .modal { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.97); z-index: 100; align-items: center; justify-content: center; }
+  .dark .modal { background: rgba(10,10,10,0.97); }
+  .modal.open { display: flex; }
+  .modal img { max-width: 92vw; max-height: 88vh; object-fit: contain; }
+  .modal .close { position: absolute; top: 16px; right: 20px; font-size: 14px; color: var(--text); cursor: pointer; background: none; border: 1px solid var(--border); padding: 4px 10px; font-family: 'IBM Plex Mono', monospace; }
+  .modal .close:hover { border-color: var(--text); }
+  .modal .info { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--text3); letter-spacing: 1px; max-width: 80vw; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .modal .nav { position: absolute; top: 50%; transform: translateY(-50%); font-size: 28px; color: var(--text); cursor: pointer; background: none; border: none; opacity: 0.3; padding: 20px; font-family: 'IBM Plex Mono', monospace; }
+  .modal .nav:hover { opacity: 1; }
+  .modal .nav.prev { left: 0; }
+  .modal .nav.next { right: 0; }
+  .modal .zoom-controls { position: absolute; bottom: 48px; right: 16px; display: flex; gap: 4px; }
+  .modal .zoom-btn { width: 30px; height: 30px; border: 1px solid var(--border); background: var(--bg); font-family: 'IBM Plex Mono', monospace; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; color: var(--text); }
+  .modal .zoom-btn:hover { border-color: var(--accent); }
+  .modal .zoom-level { padding: 0 8px; font-size: 10px; display: flex; align-items: center; background: var(--bg); border: 1px solid var(--border); min-width: 50px; justify-content: center; color: var(--text); }
+  .modal .slideshow-bar { position: absolute; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; background: var(--bg); border: 1px solid var(--border); padding: 4px 8px; }
+  .modal .slideshow-bar .ss-btn { padding: 2px 8px; border: 1px solid var(--border); background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; color: var(--text); transition: all 0.15s; }
+  .modal .slideshow-bar .ss-btn:hover { border-color: var(--text); }
+  .modal .slideshow-bar .ss-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .modal .slideshow-bar .ss-speed { font-size: 11px; color: var(--text2); white-space: nowrap; }
+
+  /* Player overlay (video) */
+  .player-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 200; flex-direction: column; }
+  .player-overlay.visible { display: flex; }
+  .player-top { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; position: absolute; top: 0; left: 0; right: 0; z-index: 10; opacity: 0; transition: opacity 0.3s; background: linear-gradient(180deg, rgba(0,0,0,0.5), transparent); }
+  .player-overlay:hover .player-top { opacity: 1; }
+  .player-top .back { padding: 5px 14px; border: 1px solid rgba(255,255,255,0.2); background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(255,255,255,0.5); cursor: pointer; transition: all 0.15s; }
+  .player-top .back:hover { border-color: #fff; color: #fff; }
+  .player-top .info { font-size: 11px; color: rgba(255,255,255,0.3); }
+  .player-video { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
+  .player-video video { max-width: calc(100vw - 40px); max-height: calc(100vh - 100px); }
+  .center-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border-radius: 50%; background: rgba(0,0,0,0.35); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, background 0.2s; z-index: 5; opacity: 0; pointer-events: none; }
+  .player-overlay:not(.playing) .center-play { opacity: 1; pointer-events: auto; }
+  .player-overlay.playing .center-play { opacity: 0; }
+  .center-play:hover { transform: translate(-50%, -50%) scale(1.08); background: rgba(0,0,0,0.5); }
+  .center-play::after { content: ''; width: 0; height: 0; border-left: 20px solid #fff; border-top: 12px solid transparent; border-bottom: 12px solid transparent; margin-left: 4px; }
+  .spinner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.15); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; opacity: 0; pointer-events: none; z-index: 5; transition: opacity 0.2s; }
+  .spinner.visible { opacity: 1; }
+  @keyframes spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+  .player-bottom { position: absolute; bottom: 16px; left: 16px; right: 16px; z-index: 10; padding: 10px 14px; border-radius: 10px; background: rgba(0,0,0,0.55); backdrop-filter: blur(16px) saturate(1.4); border: 1px solid rgba(255,255,255,0.08); opacity: 0; transition: opacity 0.3s; pointer-events: auto; }
+  .player-bottom .seek-bar, .player-bottom .player-controls { pointer-events: auto; }
+  .player-overlay:hover .player-bottom { opacity: 1; }
+  .seek-bar { width: 100%; height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; cursor: pointer; margin-bottom: 10px; position: relative; }
+  .seek-bar:hover { height: 5px; }
+  .ab-region { position: absolute; top: 0; height: 100%; background: rgba(255,255,255,0.25); border-radius: 1px; pointer-events: none; z-index: 1; }
+  .ab-marker { position: absolute; top: 50%; transform: translate(-50%,-50%); width: 3px; height: 12px; background: #fff; border-radius: 1px; z-index: 2; pointer-events: none; }
+  .seek-fill { height: 100%; background: #fff; border-radius: 1px; width: 0%; position: relative; transition: width 0.1s linear; z-index: 3; }
+  .seek-fill::after { content: ''; position: absolute; right: -5px; top: 50%; transform: translateY(-50%); width: 10px; height: 10px; background: #fff; border-radius: 50%; opacity: 0; transition: opacity 0.15s; }
+  .seek-bar:hover .seek-fill::after { opacity: 1; }
+  .seek-tooltip { position: absolute; bottom: 20px; transform: translateX(-50%); padding: 3px 8px; background: rgba(0,0,0,0.8); border-radius: 4px; font-size: 11px; color: #fff; font-family: 'IBM Plex Mono', monospace; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 20; }
+  .seek-bar:hover .seek-tooltip { opacity: 1; }
+  .player-controls { display: flex; align-items: center; justify-content: space-between; }
+  .ctrl-left, .ctrl-right { display: flex; align-items: center; gap: 10px; }
+  .ctrl { background: none; border: none; color: rgba(255,255,255,0.5); font-family: 'IBM Plex Mono', monospace; font-size: 12px; padding: 2px; cursor: pointer; transition: color 0.15s; }
+  .ctrl:hover { color: #fff; }
+  .ctrl.active { color: #fff; }
+  .ctrl:focus-visible, .back:focus-visible, .seek-bar:focus-visible, .vol-slider:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .ctrl-time { font-size: 10px; color: rgba(255,255,255,0.3); font-family: 'IBM Plex Mono', monospace; }
+  .vol-wrap { display: flex; align-items: center; gap: 6px; }
+  .vol-slider { width: 60px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 2px; cursor: pointer; position: relative; }
+  .vol-slider:hover { height: 5px; }
+  .vol-fill { height: 100%; background: #fff; border-radius: 2px; width: 80%; }
+  .vol-fill::after { content: ''; position: absolute; right: -4px; top: 50%; transform: translateY(-50%); width: 8px; height: 8px; background: #fff; border-radius: 50%; opacity: 0; transition: opacity 0.15s; }
+  .vol-slider:hover .vol-fill::after { opacity: 1; }
+  .vol-tooltip { position: absolute; bottom: 20px; transform: translateX(-50%); padding: 3px 8px; background: rgba(0,0,0,0.8); border-radius: 4px; font-size: 11px; color: #fff; font-family: 'IBM Plex Mono', monospace; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 20; }
+  .vol-slider:hover .vol-tooltip, .vol-slider:active .vol-tooltip { opacity: 1; }
+  .player-overlay.controls-hidden .player-top,
+  .player-overlay.controls-hidden .player-bottom { opacity: 0 !important; pointer-events: none; }
+  .player-overlay.controls-hidden .center-play { opacity: 0 !important; pointer-events: none; }
+  @media (hover: none) and (pointer: coarse) {
+    .player-top, .player-bottom { opacity: 1 !important; }
+    .player-overlay:not(.controls-hidden) .player-top,
+    .player-overlay:not(.controls-hidden) .player-bottom { opacity: 1 !important; }
+    .player-bottom { bottom: 12px; left: 12px; right: 12px; padding: 12px 14px; }
+    .seek-bar { height: 6px; }
+    .seek-fill::after { opacity: 1 !important; width: 14px; height: 14px; }
+    .ctrl { padding: 10px 12px; font-size: 14px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+    .vol-slider { width: 80px; height: 6px; }
+    .vol-fill::after { opacity: 1 !important; width: 14px; height: 14px; }
+    .center-play { width: 72px; height: 72px; opacity: 1 !important; pointer-events: auto !important; }
+    .player-overlay.playing .center-play { opacity: 0 !important; pointer-events: none !important; }
+    .player-top .back { padding: 10px 18px; font-size: 13px; min-height: 44px; }
+    .player-controls { padding: 4px 0; gap: 8px; }
+    /* Gallery touch targets */
+    .btn, .tf-btn, .sort-dir, .sort-random { padding: 10px 14px; min-height: 44px; font-size: 13px; }
+    .drop-zone-btn { padding: 14px 32px; font-size: 14px; }
+    .header-search input { padding: 10px 0; font-size: 14px; }
+    .header-sort select { padding: 10px 12px; font-size: 13px; }
+  }
+
+  /* Drop overlay */
+  .drop-overlay { display: none; position: fixed; inset: 0; background: var(--bg); opacity: 0.95; z-index: 250; align-items: center; justify-content: center; flex-direction: column; border: 1.5px dashed var(--accent); margin: 12px; gap: 12px; }
+  .drop-overlay.visible { display: flex; }
+  .drop-overlay .text { font-size: 14px; color: var(--accent); }
+  .drop-overlay .hint { font-size: 11px; color: var(--text3); }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 300; background: #1a1a1a; color: #fff; padding: 8px 20px; font-size: 12px; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .toast.success { border-left: 3px solid var(--accent); }
+  .toast.error { border-left: 3px solid var(--danger); }
+  .dark .toast { background: #e0e0e0; color: #1a1a1a; }
+  body.has-sel-bar .toast { bottom: 68px; }
+
+  .empty-msg { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 13px; }
+  .loading-msg { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 13px; display: none; }
+  .loading-msg.visible { display: block; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+    .drop-zone-hint .cursor { animation: none; opacity: 1; }
+  }
+
+  /* Shortcuts overlay */
+  .shortcuts-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 400; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .shortcuts-overlay.visible { display: flex; }
+  .shortcuts-panel { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; padding: 20px 24px; min-width: 320px; max-width: 90vw; max-height: 80vh; overflow-y: auto; }
+  .shortcuts-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; font-size: 13px; font-weight: 500; color: #ccc; }
+  .shortcuts-close { background: none; border: none; color: #666; font-size: 16px; cursor: pointer; padding: 4px; transition: color 0.15s; }
+  .shortcuts-close:hover { color: #fff; }
+  .shortcuts-section { margin-bottom: 12px; }
+  .shortcuts-section-title { font-size: 11px; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .shortcuts-grid { display: flex; flex-direction: column; gap: 6px; }
+  .shortcut { display: flex; align-items: center; gap: 12px; }
+  .shortcut kbd { min-width: 48px; padding: 4px 8px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #aaa; text-align: center; }
+  .shortcut span { font-size: 12px; color: #888; }
+</style>
+</head>
+<body>
+
+<!-- LANDING -->
+<div class="landing" id="landing">
+  <div class="drop-zone" id="dropZone">
+    <div class="drop-zone-title">> open_folder</div>
+    <button class="drop-zone-btn" id="openBtn">Open Folder</button>
+    <input type="file" id="folderInput" webkitdirectory multiple style="display:none">
+    <div class="drop-zone-hint">/ or drop files here<span class="cursor">_</span></div>
+  </div>
+</div>
+
+<!-- GALLERY -->
+<div class="gallery-view" id="galleryView">
+  <div class="header">
+    <button class="btn" id="openFolderHeader">Open Folder</button>
+    <div class="header-search"><input type="text" id="search" placeholder="search..."></div>
+    <div class="header-count" id="count">0 files</div>
+    <div class="type-filter" id="typeFilter">
+      <button class="tf-btn active" data-filter="all">All</button>
+      <button class="tf-btn" data-filter="image">Images</button>
+      <button class="tf-btn" data-filter="video">Videos</button>
+    </div>
+    <div class="header-sort">
+      <span class="sort-label">sort:</span>
+      <select id="sortField">
+        <option value="name">name</option>
+        <option value="date">date</option>
+        <option value="size">size</option>
+        <option value="type">type</option>
+        <option value="duration">duration</option>
+        <option value="resolution">resolution</option>
+      </select>
+      <button class="sort-dir" id="sortDir" title="Toggle sort direction">↑</button>
+      <button class="sort-random" id="sortRandom">random</button>
+    </div>
+    <div class="header-actions">
+      <button class="btn" id="themeBtn">dark</button>
+      <button class="btn" id="selectBtn">Select</button>
+      <button class="btn" id="slideshowBtn">Slideshow</button>
+      <button class="btn" id="playBtn" disabled>Play</button>
+    </div>
+  </div>
+  <div class="sel-bar" id="selBar">
+    <span class="sel-count" id="selCount">0 selected</span>
+    <button class="btn" id="selAllBtn">All</button>
+    <button class="btn" id="deselBtn">None</button>
+    <button class="btn primary" id="moveExistBtn">Move → Folder</button>
+    <button class="btn danger" id="delBtn">Remove</button>
+    <button class="btn danger" id="deleteBtn">Delete from disk</button>
+    <button class="btn" id="cancelBtn">Cancel</button>
+  </div>
+  <div class="grid active" id="grid"></div>
+  <div id="scrollSentinel" style="height:1px"></div>
+  <div class="loading-msg" id="loadingMsg">loading...</div>
+  <div class="empty-msg" id="emptyMsg" style="display:none">no files found</div>
+</div>
+
+<div class="drop-overlay" id="dropOverlay">
+  <div class="text">> drop files here</div>
+  <div class="hint">recursive folder scan</div>
+</div>
+
+<!-- IMAGE MODAL -->
+<div class="modal" id="modal">
+  <button class="close" id="modalClose">close ×</button>
+  <div class="slideshow-bar" id="ssBar" style="display:none">
+    <button class="ss-btn" id="ssPrev">‹</button>
+    <button class="ss-btn" id="ssPlayPause">pause</button>
+    <button class="ss-btn" id="ssNext">›</button>
+    <button class="ss-btn" id="ssSlower">−</button>
+    <span class="ss-speed" id="ssSpeed">3s</span>
+    <button class="ss-btn" id="ssFaster">+</button>
+    <button class="ss-btn" id="ssStop">stop</button>
+  </div>
+  <button class="nav prev" id="modalPrev">‹</button>
+  <button class="nav next" id="modalNext">›</button>
+  <img id="modalImg" src="" alt="" onerror="this.style.display='none'; $('modalError').style.display='flex';">
+  <div id="modalError" style="display:none; align-items:center; justify-content:center; color:var(--text3); font-size:13px;">failed to load</div>
+  <div class="zoom-controls">
+    <button class="zoom-btn" id="zoomOut">−</button>
+    <div class="zoom-level" id="zoomLevel">100%</div>
+    <button class="zoom-btn" id="zoomIn">+</button>
+  </div>
+  <div class="info" id="modalInfo"></div>
+</div>
+
+<!-- VIDEO PLAYER -->
+<div class="player-overlay" id="playerOverlay">
+  <div class="player-top">
+    <button class="back" id="backBtn">← back</button>
+    <span class="info" id="playerInfo"></span>
+  </div>
+  <div class="player-video">
+    <video id="playerVideo" playsinline></video>
+    <div class="center-play" id="centerPlayBtn"></div>
+    <div class="spinner" id="spinner"></div>
+  </div>
+  <div class="player-bottom">
+    <div class="seek-bar" id="seekBar" tabindex="0"><div class="seek-fill" id="seekFill"></div><div class="seek-tooltip" id="seekTooltip">0:00</div></div>
+    <div class="player-controls">
+      <div class="ctrl-left">
+        <button class="ctrl" id="prevBtn">|◄</button>
+        <button class="ctrl" id="playPauseBtn">►</button>
+        <button class="ctrl" id="nextBtn">►|</button>
+        <button class="ctrl active" id="loopBtn">loop</button>
+        <button class="ctrl" id="abBtn" title="A-B repeat: [ and ]">A-B</button>
+        <button class="ctrl" id="speedBtn">1x</button>
+        <button class="ctrl" id="shuffleBtn">shuffle</button>
+        <button class="ctrl" id="pipBtn">PiP</button>
+        <button class="ctrl" id="fsBtn">⛶</button>
+      </div>
+      <div class="ctrl-right">
+        <span class="ctrl-time" id="timeDisplay">0:00 / 0:00</span>
+        <div class="vol-wrap">
+          <button class="ctrl" id="muteBtn">♪</button>
+          <div class="vol-slider" id="volSlider" tabindex="0"><div class="vol-fill" id="volFill"></div><div class="vol-tooltip" id="volTooltip">0%</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="shortcuts-overlay" id="shortcutsOverlay">
+  <div class="shortcuts-panel">
+    <div class="shortcuts-header">
+      <span>Keyboard Shortcuts</span>
+      <button class="shortcuts-close" id="shortcutsClose">✕</button>
+    </div>
+    <div class="shortcuts-section">
+      <div class="shortcuts-section-title">Gallery</div>
+      <div class="shortcuts-grid">
+        <div class="shortcut"><kbd>S</kbd><span>Select mode</span></div>
+        <div class="shortcut"><kbd>F</kbd><span>Open folder</span></div>
+        <div class="shortcut"><kbd>Arrow keys</kbd><span>Navigate cards</span></div>
+        <div class="shortcut"><kbd>Enter</kbd><span>Open card</span></div>
+        <div class="shortcut"><kbd>Esc</kbd><span>Exit select / clear search</span></div>
+        <div class="shortcut"><kbd>?</kbd><span>Show shortcuts</span></div>
+      </div>
+    </div>
+    <div class="shortcuts-section">
+      <div class="shortcuts-section-title">Image Viewer</div>
+      <div class="shortcuts-grid">
+        <div class="shortcut"><kbd>←</kbd><span>Previous image</span></div>
+        <div class="shortcut"><kbd>→</kbd><span>Next image</span></div>
+        <div class="shortcut"><kbd>↑</kbd><span>Zoom in</span></div>
+        <div class="shortcut"><kbd>↓</kbd><span>Zoom out</span></div>
+        <div class="shortcut"><kbd>Esc</kbd><span>Close viewer</span></div>
+      </div>
+    </div>
+    <div class="shortcuts-section">
+      <div class="shortcuts-section-title">Video Player</div>
+      <div class="shortcuts-grid">
+        <div class="shortcut"><kbd>Space</kbd><span>Play / Pause</span></div>
+        <div class="shortcut"><kbd>←</kbd><span>Previous video</span></div>
+        <div class="shortcut"><kbd>→</kbd><span>Next video</span></div>
+        <div class="shortcut"><kbd>F</kbd><span>Fullscreen</span></div>
+        <div class="shortcut"><kbd>M</kbd><span>Mute</span></div>
+        <div class="shortcut"><kbd>[</kbd><span>Set A-B start</span></div>
+        <div class="shortcut"><kbd>]</kbd><span>Set A-B end</span></div>
+        <div class="shortcut"><kbd>⌫</kbd><span>Clear A-B loop</span></div>
+        <div class="shortcut"><kbd>Esc</kbd><span>Close player</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== CONFIG =====
+const IMAGE_EXTS = /\.(jpe?g|png|gif|webp|bmp|svg|avif|tiff?)$/i;
+const VIDEO_EXT = /\.(mp4|webm|ogg|mov|mkv|avi|m4v|flv|wmv|m2ts|ts|3gp)$/i;
+
+// ===== STATE =====
+let allFiles = [], filtered = [], currentModalUrl = null, selectMode = false;
+let sortField = 'name', sortAsc = true, activeFilter = 'all'; // all | image | video
+const selected = new Map(); // url → order number
+const fileMeta = new Map(); // name → { name, file, url, type, duration?, thumbUrl?, videoWidth?, videoHeight? }
+const urlToName = new Map(); // url → name
+let sourceDirHandle = null;
+
+const $ = id => document.getElementById(id);
+
+// Cached DOM refs for hot-path handlers
+const _playerVideo = $('playerVideo'), _seekFill = $('seekFill'), _timeDisplay = $('timeDisplay');
+const _volFill = $('volFill'), _muteBtn = $('muteBtn');
+
+// O(1) url→index lookup (rebuilt on render)
+let filteredIndex = new Map();
+function rebuildFilteredIndex() { filteredIndex.clear(); filtered.forEach((url, i) => filteredIndex.set(url, i)); }
+
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function getNameForURL(url) { return urlToName.get(url) || url.split('/').pop(); }
+function getMetaForURL(url) { return fileMeta.get(urlToName.get(url)) || null; }
+function isImage(url) { return getMetaForURL(url)?.type === 'image'; }
+function isVideo(url) { return getMetaForURL(url)?.type === 'video'; }
+function getExt(name) { const dot = name.lastIndexOf('.'); return dot > -1 ? name.slice(dot + 1).toLowerCase() : ''; }
+function formatDur(s) { const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sec = Math.floor(s%60); return h > 0 ? h+':'+String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0') : m+':'+String(sec).padStart(2,'0'); }
+function formatTime(s) { const m = Math.floor(s/60), sec = Math.floor(s%60); return m + ':' + String(sec).padStart(2, '0'); }
+
+// ===== FILE LOADING =====
+function addFiles(files) {
+  for (const file of files) {
+    if (fileMeta.has(file.name)) continue;
+    let type = null;
+    if (IMAGE_EXTS.test(file.name)) type = 'image';
+    else if (VIDEO_EXT.test(file.name)) type = 'video';
+    else continue;
+    const url = URL.createObjectURL(file);
+    const meta = { name: file.name, file, url, type, duration: null, thumbUrl: null, videoWidth: 320, videoHeight: 180, lastModified: file.lastModified || 0 };
+    fileMeta.set(file.name, meta);
+    urlToName.set(url, file.name);
+    allFiles.push(url);
+  }
+  render();
+  loadVideoMetadata();
+}
+
+async function loadVideoMetadata() {
+  const videoUrls = allFiles.filter(u => isVideo(u));
+  const CONCURRENT = 4;
+  let cursor = 0;
+  // Verify card still belongs to this URL before updating
+  function getCardForUrl(url) {
+    const idx = filteredIndex.get(url);
+    if (idx < 0) return null;
+    const card = document.getElementById(`t-${idx}`);
+    if (!card || card.dataset.url !== url) return null;
+    return card;
+  }
+  async function processNext() {
+    while (cursor < videoUrls.length) {
+      const url = videoUrls[cursor++];
+      const meta = getMetaForURL(url);
+      if (!meta || meta.thumbUrl) continue;
+      try {
+        const v = document.createElement('video'); v.preload = 'metadata'; v.muted = true; v.src = url;
+        await new Promise(r => { v.addEventListener('loadedmetadata', r); v.addEventListener('error', r); v.load(); });
+        if (v.duration && isFinite(v.duration)) meta.duration = v.duration;
+        if (v.videoWidth && v.videoHeight) {
+          meta.videoWidth = v.videoWidth;
+          meta.videoHeight = v.videoHeight;
+          const card = getCardForUrl(url);
+          if (card) card.style.aspectRatio = `${v.videoWidth}/${v.videoHeight}`;
+        }
+        v.currentTime = Math.min(1, (v.duration || 10) * 0.1);
+        await new Promise(r => { v.addEventListener('seeked', r); v.addEventListener('error', r); });
+        const scale = Math.min(1, 320 / (meta.videoWidth || 320));
+        const tw = Math.round(meta.videoWidth * scale), th = Math.round(meta.videoHeight * scale);
+        const c = document.createElement('canvas'); c.width = tw; c.height = th;
+        c.getContext('2d').drawImage(v, 0, 0, tw, th);
+        meta.thumbUrl = c.toDataURL('image/jpeg', 0.7);
+        v.src = ''; // release video element
+        const card = getCardForUrl(url);
+        if (card) {
+          const img = card.querySelector('img');
+          if (img) img.src = meta.thumbUrl;
+          const dur = card.querySelector('.dur');
+          if (dur && meta.duration) dur.textContent = formatDur(meta.duration);
+        }
+      } catch(e) {
+        const card = getCardForUrl(url);
+        if (card) {
+          const img = card.querySelector('img');
+          if (img) img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect fill='%23fee2e2' width='320' height='180'/%3E%3Ctext x='160' y='95' text-anchor='middle' fill='%23dc2626' font-size='12' font-family='monospace'%3Eload failed%3C/text%3E%3C/svg%3E";
+        }
+      }
+    }
+  }
+  await Promise.all(Array.from({length: CONCURRENT}, processNext));
+}
+
+async function writeFileToDir(dirHandle, fileName, fileObj) {
+  const handle = await dirHandle.getFileHandle(fileName, { create: true });
+  const writable = await handle.createWritable();
+  const buffer = await fileObj.arrayBuffer();
+  await writable.write(buffer);
+  await writable.close();
+}
+
+// ===== SORT & FILTER =====
+function sortFiles(urls) {
+  if (sortField === 'none') return urls;
+  return urls.slice().sort((a, b) => {
+    let cmp = 0;
+    if (sortField === 'name') cmp = getNameForURL(a).localeCompare(getNameForURL(b));
+    else if (sortField === 'date') { const da = getMetaForURL(a)?.lastModified || getMetaForURL(a)?.file?.lastModified || 0; const db = getMetaForURL(b)?.lastModified || getMetaForURL(b)?.file?.lastModified || 0; cmp = da - db; }
+    else if (sortField === 'size') { const sa = getMetaForURL(a)?.file?.size || 0; const sb = getMetaForURL(b)?.file?.size || 0; cmp = sa - sb; }
+    else if (sortField === 'type') { cmp = getExt(getNameForURL(a)).localeCompare(getExt(getNameForURL(b))); }
+    else if (sortField === 'duration') { const da = getMetaForURL(a)?.duration || 0; const db = getMetaForURL(b)?.duration || 0; cmp = da - db; }
+    else if (sortField === 'resolution') { const ra = (getMetaForURL(a)?.videoWidth || 0) * (getMetaForURL(a)?.videoHeight || 0); const rb = (getMetaForURL(b)?.videoWidth || 0) * (getMetaForURL(b)?.videoHeight || 0); cmp = ra - rb; }
+    return sortAsc ? cmp : -cmp;
+  });
+}
+
+function applyFilter(urls) {
+  if (activeFilter === 'all') return urls;
+  return urls.filter(u => getMetaForURL(u)?.type === activeFilter);
+}
+
+function render() {
+  const q = $('search').value.toLowerCase();
+  const matched = allFiles.filter(url => getNameForURL(url).toLowerCase().includes(q));
+  const typeFiltered = applyFilter(matched);
+  filtered = sortFiles(typeFiltered);
+  rebuildFilteredIndex();
+
+  // Remove selection for files no longer visible
+  for (const url of selected.keys()) {
+    if (!filteredIndex.has(url)) selected.delete(url);
+  }
+
+  const hasFiles = allFiles.length > 0;
+  $('landing').classList.toggle('hidden', hasFiles);
+  $('galleryView').classList.toggle('visible', hasFiles);
+  $('count').textContent = `${filtered.length} file${filtered.length !== 1 ? 's' : ''}`;
+  $('emptyMsg').style.display = filtered.length ? 'none' : '';
+  $('playBtn').disabled = selected.size === 0 && !filtered.some(u => isVideo(u));
+  $('slideshowBtn').disabled = !filtered.some(u => isImage(u));
+
+  buildGrid();
+  updateSelBar();
+}
+
+// ===== GRID =====
+function cardHTML(src, i) {
+  const meta = getMetaForURL(src);
+  const sel = selected.has(src) ? ' selected' : '';
+  const num = selected.get(src);
+  const vid = meta?.type === 'video';
+  const cls = vid ? 'video-thumb' : 'image-thumb';
+
+  const alt = escapeHtml(getNameForURL(src));
+  let thumb, extra = '';
+  if (vid) {
+    const ar = meta?.videoWidth && meta?.videoHeight ? `${meta.videoWidth}/${meta.videoHeight}` : '16/9';
+    thumb = meta?.thumbUrl
+      ? `<img src="${meta.thumbUrl}" alt="${alt}" loading="lazy">`
+      : `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect fill='%23f0f0f0' width='320' height='180'/%3E%3Ctext x='160' y='95' text-anchor='middle' fill='%23ccc' font-size='14' font-family='monospace'%3Eloading...%3C/text%3E%3C/svg%3E" alt="${alt}">`;
+    const dur = meta?.duration ? `<div class="dur">${formatDur(meta.duration)}</div>` : '';
+    extra = `<div class="play-icon"></div>${dur}`;
+    return `<div class="thumb ${cls}${sel}" id="t-${i}" data-url="${src}" tabindex="0" style="aspect-ratio:${ar}" onclick="handleClick(event,${i})">
+      <div class="badge">${num !== undefined ? num : '0'}</div>${thumb}${extra}
+      <div class="name">${escapeHtml(getNameForURL(src))}</div>
+    </div>`;
+  } else {
+    thumb = `<img src="${src}" alt="${alt}" loading="lazy">`;
+    return `<div class="thumb ${cls}${sel}" id="t-${i}" data-url="${src}" tabindex="0" onclick="handleClick(event,${i})">
+      <div class="badge">${num !== undefined ? num : '0'}</div>${thumb}
+      <div class="name">${escapeHtml(getNameForURL(src))}</div>
+    </div>`;
+  }
+}
+
+// Virtual scroll
+const BATCH = 50;
+let renderedEnd = 0, loadingMore = false;
+
+function appendBatch() {
+  const start = renderedEnd;
+  const end = Math.min(start + BATCH, filtered.length);
+  if (start >= end) return;
+  const frag = document.createDocumentFragment();
+  const temp = document.createElement('div');
+  for (let i = start; i < end; i++) {
+    temp.innerHTML = cardHTML(filtered[i], i);
+    frag.appendChild(temp.firstElementChild);
+  }
+  $('grid').appendChild(frag);
+  renderedEnd = end;
+  // Apply any metadata that loaded before this card was rendered
+  for (let i = start; i < end; i++) {
+    const url = filtered[i];
+    const meta = getMetaForURL(url);
+    if (!meta || meta.type !== 'video') continue;
+    const card = document.getElementById(`t-${i}`);
+    if (!card) continue;
+    if (meta.videoWidth && meta.videoHeight) card.style.aspectRatio = `${meta.videoWidth}/${meta.videoHeight}`;
+    if (meta.thumbUrl) { const img = card.querySelector('img'); if (img) img.src = meta.thumbUrl; }
+    if (meta.duration) { const dur = card.querySelector('.dur'); if (dur) dur.textContent = formatDur(meta.duration); }
+  }
+}
+
+function buildGrid() {
+  $('grid').innerHTML = '';
+  renderedEnd = 0;
+  appendBatch();
+}
+
+// Load more when sentinel enters viewport
+const _sentinel = $('scrollSentinel');
+const _gridObserver = new IntersectionObserver(entries => {
+  if (entries[0].isIntersecting && renderedEnd < filtered.length && !loadingMore) {
+    loadingMore = true;
+    requestAnimationFrame(() => { appendBatch(); loadingMore = false; });
+  }
+}, { rootMargin: '400px' });
+_gridObserver.observe(_sentinel);
+
+function handleClick(e, i) {
+  if (selectMode) {
+    e.stopPropagation();
+    toggleSelection(filtered[i], i);
+  } else {
+    if (isVideo(filtered[i])) startPlayback(filtered[i]);
+    else openModal(filtered[i]);
+  }
+}
+
+// ===== SELECTION =====
+function toggleSelection(url, index) {
+  const el = document.getElementById(`t-${index}`);
+  if (!el) return;
+  const badge = el.querySelector('.badge');
+  if (selected.has(url)) { selected.delete(url); el.classList.remove('selected'); badge.textContent = '0'; }
+  else { selected.set(url, 0); el.classList.add('selected'); }
+  renumberSelected();
+  updateSelBar();
+  $('playBtn').disabled = selected.size === 0;
+}
+
+function renumberSelected() {
+  let n = 0;
+  for (const [url] of selected) {
+    n++; selected.set(url, n);
+    const idx = filteredIndex.get(url);
+    if (idx > -1) { const el = document.getElementById(`t-${idx}`); if (el) el.querySelector('.badge').textContent = n; }
+  }
+}
+
+function toggleSelectMode() {
+  selectMode = !selectMode;
+  document.body.classList.toggle('sel-mode', selectMode);
+  $('selectBtn').classList.toggle('active', selectMode);
+  $('selectBtn').textContent = selectMode ? 'Selecting...' : 'Select';
+  if (!selectMode) selected.clear();
+  $('playBtn').disabled = selected.size === 0;
+  buildGrid();
+  updateSelBar();
+}
+
+function exitSelectMode() {
+  selected.clear(); selectMode = false;
+  document.body.classList.remove('sel-mode', 'has-sel-bar');
+  $('selectBtn').classList.remove('active');
+  $('selectBtn').textContent = 'Select';
+  $('playBtn').disabled = true;
+  buildGrid();
+}
+
+function updateSelBar() {
+  const show = selectMode && selected.size > 0;
+  $('selBar').classList.toggle('visible', show);
+  document.body.classList.toggle('has-sel-bar', show);
+  $('selCount').textContent = `${selected.size} selected${selected.size ? ' in order' : ''}`;
+}
+
+// ===== IMAGE MODAL =====
+let zoomLevel = 1;
+function resetZoom() { zoomLevel = 1; $('modalImg').style.transform = ''; $('zoomLevel').textContent = '100%'; }
+function applyZoom(delta) { zoomLevel = Math.max(0.25, Math.min(5, zoomLevel + delta)); $('modalImg').style.transform = `scale(${zoomLevel})`; $('zoomLevel').textContent = Math.round(zoomLevel * 100) + '%'; }
+
+function getImageIndex(filteredIdx) {
+  // Map filtered index to image-only index for modal navigation
+  const imageUrls = filtered.filter(u => isImage(u));
+  const url = filtered[filteredIdx];
+  return imageUrls.indexOf(url);
+}
+
+function getImageUrls() { return filtered.filter(u => isImage(u)); }
+
+function openModal(url) {
+  currentModalUrl = url;
+  $('modalImg').style.display = '';
+  $('modalError').style.display = 'none';
+  $('modalImg').src = url;
+  $('modalImg').alt = getNameForURL(url);
+  const imageUrls = getImageUrls();
+  const imgIdx = imageUrls.indexOf(url);
+  $('modalInfo').textContent = `${imgIdx + 1} / ${imageUrls.length}  —  ${getNameForURL(url)}`;
+  $('modal').classList.add('open');
+  resetZoom();
+}
+
+function closeModal() { stopSlideshow(); resetZoom(); $('modal').classList.remove('open'); currentModalUrl = null; }
+
+function modalNav(d) {
+  const imageUrls = getImageUrls();
+  if (!imageUrls.length) return;
+  let imgIdx = imageUrls.indexOf(currentModalUrl);
+  if (imgIdx < 0) imgIdx = 0;
+  imgIdx = (imgIdx + d + imageUrls.length) % imageUrls.length;
+  openModal(imageUrls[imgIdx]);
+}
+
+$('zoomIn').addEventListener('click', () => applyZoom(0.25));
+$('zoomOut').addEventListener('click', () => applyZoom(-0.25));
+$('modalClose').addEventListener('click', closeModal);
+$('modalPrev').addEventListener('click', () => modalNav(-1));
+$('modalNext').addEventListener('click', () => modalNav(1));
+$('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
+
+// ===== SLIDESHOW =====
+let ssRunning = false, ssTimer = null, ssSpeed = 3000;
+
+function startSlideshow() {
+  const imageUrls = getImageUrls();
+  if (!imageUrls.length) return;
+  if (!currentModalUrl || !isImage(currentModalUrl)) {
+    openModal(imageUrls[0]);
+  }
+  ssRunning = true;
+  $('ssBar').style.display = '';
+  $('ssPlayPause').textContent = 'pause';
+  $('ssSpeed').textContent = (ssSpeed / 1000) + 's';
+  scheduleNext();
+}
+
+function stopSlideshow() { ssRunning = false; clearTimeout(ssTimer); $('ssBar').style.display = 'none'; }
+function scheduleNext() { clearTimeout(ssTimer); if (!ssRunning) return; ssTimer = setTimeout(() => { modalNav(1); scheduleNext(); }, ssSpeed); }
+function togglePlayPause() { if (ssRunning) { ssRunning = false; clearTimeout(ssTimer); $('ssPlayPause').textContent = 'play'; } else { ssRunning = true; $('ssPlayPause').textContent = 'pause'; scheduleNext(); } }
+function adjustSpeed(delta) { ssSpeed = Math.max(500, Math.min(10000, ssSpeed + delta)); $('ssSpeed').textContent = (ssSpeed / 1000) + 's'; if (ssRunning) scheduleNext(); }
+
+$('slideshowBtn').addEventListener('click', startSlideshow);
+$('ssPlayPause').addEventListener('click', togglePlayPause);
+$('ssStop').addEventListener('click', stopSlideshow);
+$('ssPrev').addEventListener('click', () => { modalNav(-1); if (ssRunning) scheduleNext(); });
+$('ssNext').addEventListener('click', () => { modalNav(1); if (ssRunning) scheduleNext(); });
+$('ssSlower').addEventListener('click', () => adjustSpeed(500));
+$('ssFaster').addEventListener('click', () => adjustSpeed(-500));
+
+// ===== VIDEO PLAYER =====
+let playing = false, seekDragging = false, _lastFocused = null;
+let playlist = [], currentIdx = -1, loopMode = 1, shuffleEnabled = false, originalPlaylist = [];
+
+function startPlayback(url) {
+  if (selectMode) return;
+  const videoUrls = filtered.filter(u => isVideo(u));
+  playlist = selected.size > 0 ? [...selected.keys()].filter(u => isVideo(u)) : videoUrls;
+  currentIdx = playlist.indexOf(url);
+  if (currentIdx === -1) { playlist = videoUrls; currentIdx = 0; }
+  playing = true;
+  _lastFocused = document.activeElement;
+  $('playerOverlay').classList.add('visible', 'playing');
+  document.body.style.overflow = 'hidden';
+  loadVideo();
+}
+
+function loadVideo() {
+  clearAB();
+  const url = playlist[currentIdx];
+  $('playerVideo').src = url;
+  $('playerVideo').load();
+  $('playerVideo').play().catch(() => {});
+  $('playerInfo').textContent = `${currentIdx+1}/${playlist.length} — ${getNameForURL(url)}`;
+  $('playerOverlay').classList.add('playing');
+  updatePPBtn();
+}
+
+function stopPlayback() {
+  playing = false;
+  $('playerVideo').pause();
+  $('playerOverlay').classList.remove('visible', 'playing');
+  document.body.style.overflow = '';
+  if (_lastFocused) { _lastFocused.focus(); _lastFocused = null; }
+}
+
+function updatePPBtn() {
+  const paused = $('playerVideo').paused;
+  $('playPauseBtn').textContent = paused ? '►' : '❚❚';
+  $('playerOverlay').classList.toggle('playing', !paused);
+  if (paused) { showControls(); clearTimeout(controlsTimer); } else { showControls(); }
+}
+
+_playerVideo.addEventListener('timeupdate', () => {
+  if (_playerVideo.duration) {
+    _seekFill.style.width = (_playerVideo.currentTime / _playerVideo.duration * 100) + '%';
+    _timeDisplay.textContent = formatTime(_playerVideo.currentTime) + ' / ' + formatTime(_playerVideo.duration);
+    if (abA !== null && abB !== null && _playerVideo.currentTime >= abB) _playerVideo.currentTime = abA;
+  }
+});
+
+function seekFromEvent(e) {
+  const rect = $('seekBar').getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  $('playerVideo').currentTime = pct * $('playerVideo').duration;
+}
+
+$('seekBar').addEventListener('mousemove', e => {
+  const rect = $('seekBar').getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const time = pct * ($('playerVideo').duration || 0);
+  $('seekTooltip').textContent = formatTime(time);
+  $('seekTooltip').style.left = (e.clientX - rect.left) + 'px';
+});
+$('seekBar').addEventListener('mousedown', e => { seekDragging = true; seekFromEvent(e); e.preventDefault(); });
+document.addEventListener('mousemove', e => { if (seekDragging) seekFromEvent(e); });
+document.addEventListener('mouseup', () => { seekDragging = false; });
+document.addEventListener('mouseleave', () => { seekDragging = false; });
+document.addEventListener('pointercancel', () => { seekDragging = false; });
+$('seekBar').addEventListener('click', seekFromEvent);
+
+$('playerVideo').addEventListener('ended', () => {
+  if (!playing) return;
+  if (loopMode === 2) loadVideo();
+  else if (loopMode === 1) { currentIdx = (currentIdx + 1) % playlist.length; loadVideo(); }
+  else { if (currentIdx < playlist.length - 1) { currentIdx++; loadVideo(); } else stopPlayback(); }
+});
+
+$('playerVideo').addEventListener('error', () => {
+  if (!playing) return;
+  showToast(`Failed to play ${getNameForURL(playlist[currentIdx])} — skipping`, 'error');
+  if (currentIdx < playlist.length - 1) { currentIdx++; loadVideo(); } else stopPlayback();
+});
+
+$('playerVideo').addEventListener('play', updatePPBtn);
+$('playerVideo').addEventListener('pause', updatePPBtn);
+$('playerVideo').addEventListener('waiting', () => $('spinner').classList.add('visible'));
+$('playerVideo').addEventListener('playing', () => $('spinner').classList.remove('visible'));
+$('playerVideo').addEventListener('canplay', () => $('spinner').classList.remove('visible'));
+
+$('backBtn').addEventListener('click', stopPlayback);
+$('centerPlayBtn').addEventListener('click', e => { e.stopPropagation(); $('playerVideo').play().catch(()=>{}); });
+$('playPauseBtn').addEventListener('click', () => { $('playerVideo').paused ? $('playerVideo').play().catch(()=>{}) : $('playerVideo').pause(); });
+$('prevBtn').addEventListener('click', () => { if (!playlist.length) return; currentIdx = (currentIdx - 1 + playlist.length) % playlist.length; loadVideo(); });
+$('nextBtn').addEventListener('click', () => { if (!playlist.length) return; currentIdx = (currentIdx + 1) % playlist.length; loadVideo(); });
+
+// Loop
+function updateLoopBtn() { const labels = ['loop off', 'loop all', 'loop 1']; $('loopBtn').textContent = labels[loopMode]; $('loopBtn').classList.toggle('active', loopMode > 0); }
+$('loopBtn').addEventListener('click', () => { loopMode = (loopMode + 1) % 3; updateLoopBtn(); });
+updateLoopBtn();
+
+// A-B repeat
+let abA = null, abB = null;
+function updateABBtn() { const active = abA !== null && abB !== null; $('abBtn').classList.toggle('active', active); $('abBtn').textContent = active ? 'A-B ✓' : abA !== null ? 'A-...' : 'A-B'; }
+function updateABRegion() {
+  $('seekBar').querySelectorAll('.ab-region,.ab-marker').forEach(el => el.remove());
+  const dur = _playerVideo.duration;
+  if (!dur || !isFinite(dur)) return;
+  if (abA !== null) { const m = document.createElement('div'); m.className = 'ab-marker'; m.style.left = (abA / dur * 100) + '%'; $('seekBar').appendChild(m); }
+  if (abB !== null) { const m = document.createElement('div'); m.className = 'ab-marker'; m.style.left = (abB / dur * 100) + '%'; $('seekBar').appendChild(m); }
+  if (abA !== null && abB !== null) { const r = document.createElement('div'); r.className = 'ab-region'; r.style.left = Math.min(abA, abB) / dur * 100 + '%'; r.style.width = Math.abs(abB - abA) / dur * 100 + '%'; $('seekBar').appendChild(r); }
+}
+function setPointA() { abA = _playerVideo.currentTime; if (abB !== null && abA >= abB) abB = null; updateABBtn(); updateABRegion(); }
+function setPointB() { if (abA === null) return; abB = _playerVideo.currentTime; if (abB <= abA) { abB = null; return; } updateABBtn(); updateABRegion(); }
+function clearAB() { abA = null; abB = null; updateABBtn(); updateABRegion(); }
+$('abBtn').addEventListener('click', () => { if (abA === null) setPointA(); else if (abB === null) setPointB(); else clearAB(); });
+
+// Speed
+const speeds = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
+let speedIdx = 3;
+function updateSpeed() { $('playerVideo').playbackRate = speeds[speedIdx]; $('speedBtn').textContent = speeds[speedIdx] + 'x'; $('speedBtn').classList.toggle('active', speeds[speedIdx] !== 1); }
+$('speedBtn').addEventListener('click', () => { speedIdx = (speedIdx + 1) % speeds.length; updateSpeed(); });
+
+// Shuffle
+function shuffleArray(arr) { const a = arr.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+$('shuffleBtn').addEventListener('click', () => {
+  shuffleEnabled = !shuffleEnabled;
+  $('shuffleBtn').classList.toggle('active', shuffleEnabled);
+  if (shuffleEnabled) { originalPlaylist = playlist.slice(); const current = playlist[currentIdx]; playlist = shuffleArray(playlist); currentIdx = playlist.indexOf(current); }
+  else if (originalPlaylist.length) { const current = playlist[currentIdx]; playlist = originalPlaylist.slice(); currentIdx = playlist.indexOf(current); originalPlaylist = []; }
+});
+
+// PiP
+$('pipBtn').addEventListener('click', async () => { try { if (document.pictureInPictureElement) await document.exitPictureInPicture(); else if (document.pictureInPictureEnabled) await $('playerVideo').requestPictureInPicture(); } catch (e) { showToast('PiP not supported', 'error'); } });
+
+// Fullscreen
+function toggleFullscreen() { if (document.fullscreenElement) document.exitFullscreen(); else $('playerOverlay').requestFullscreen().catch(() => {}); }
+$('fsBtn').addEventListener('click', e => { e.stopPropagation(); toggleFullscreen(); });
+$('playerVideo').addEventListener('dblclick', e => { e.preventDefault(); e.stopPropagation(); toggleFullscreen(); });
+
+// Auto-hide controls
+let controlsTimer;
+function showControls() { $('playerOverlay').classList.remove('controls-hidden'); clearTimeout(controlsTimer); if (playing && !$('playerVideo').paused) controlsTimer = setTimeout(() => $('playerOverlay').classList.add('controls-hidden'), 3000); }
+$('playerOverlay').addEventListener('mousemove', showControls);
+$('playerOverlay').addEventListener('touchstart', showControls, { passive: true });
+$('playerVideo').addEventListener('click', e => { e.stopPropagation(); if ($('playerOverlay').classList.contains('controls-hidden')) showControls(); else $('playerVideo').paused ? $('playerVideo').play().catch(()=>{}) : $('playerVideo').pause(); });
+
+// Swipe
+let touchStartX = 0, touchStartY = 0;
+$('playerOverlay').addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY; }, { passive: true });
+$('playerOverlay').addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX, dy = e.changedTouches[0].clientY - touchStartY;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    if (dx < 0) { currentIdx = (currentIdx + 1) % playlist.length; loadVideo(); showControls(); }
+    else { currentIdx = (currentIdx - 1 + playlist.length) % playlist.length; loadVideo(); showControls(); }
+  }
+}, { passive: true });
+
+// Volume
+$('muteBtn').addEventListener('click', () => { $('playerVideo').muted = !$('playerVideo').muted; $('muteBtn').classList.toggle('active', $('playerVideo').muted); updateVolFill(); });
+function updateVolFill() { const vol = _playerVideo.muted ? 0 : _playerVideo.volume; _volFill.style.width = (vol * 100) + '%'; _muteBtn.textContent = vol === 0 ? '♪̸' : vol < 0.5 ? '♪' : '♫'; _muteBtn.classList.toggle('active', _playerVideo.muted || vol === 0); }
+$('volSlider').addEventListener('click', e => { const rect = $('volSlider').getBoundingClientRect(); const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)); $('playerVideo').volume = pct; $('playerVideo').muted = pct === 0; updateVolFill(); });
+let volDragging = false;
+function volFromEvent(e) { const rect = $('volSlider').getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)); }
+function updateVolTooltip(pct) { $('volTooltip').textContent = Math.round(pct * 100) + '%'; $('volTooltip').style.left = (pct * 100) + '%'; }
+$('volSlider').addEventListener('mousemove', e => updateVolTooltip(volFromEvent(e)));
+$('volSlider').addEventListener('mousedown', e => { volDragging = true; updateVolTooltip(volFromEvent(e)); e.preventDefault(); });
+document.addEventListener('mousemove', e => { if (!volDragging) return; const pct = volFromEvent(e); $('playerVideo').volume = pct; $('playerVideo').muted = pct === 0; updateVolFill(); updateVolTooltip(pct); });
+document.addEventListener('mouseup', () => { volDragging = false; });
+document.addEventListener('mouseleave', () => { volDragging = false; });
+document.addEventListener('pointercancel', () => { volDragging = false; });
+$('playerVideo').addEventListener('loadedmetadata', () => { updateVolFill(); updateABRegion(); });
+
+$('playBtn').addEventListener('click', () => {
+  const videoUrls = filtered.filter(u => isVideo(u));
+  if (selected.size > 0) playlist = [...selected.keys()].filter(u => isVideo(u));
+  else playlist = videoUrls;
+  if (!playlist.length) return;
+  currentIdx = 0; playing = true;
+  $('playerOverlay').classList.add('visible');
+  document.body.style.overflow = 'hidden';
+  loadVideo();
+});
+
+// ===== TYPE FILTER =====
+$('typeFilter').addEventListener('click', e => {
+  const btn = e.target.closest('.tf-btn');
+  if (!btn) return;
+  activeFilter = btn.dataset.filter;
+  $('typeFilter').querySelectorAll('.tf-btn').forEach(b => b.classList.toggle('active', b === btn));
+  render();
+});
+
+// ===== FOLDER OPEN =====
+async function openFolder() {
+  if (window.showDirectoryPicker) {
+    try {
+      const newHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'desktop' });
+      for (const [, meta] of fileMeta) URL.revokeObjectURL(meta.url);
+      allFiles.length = 0; filtered.length = 0;
+      fileMeta.clear(); urlToName.clear();
+      selected.clear(); selectMode = false;
+      sourceDirHandle = newHandle;
+      $('loadingMsg').classList.add('visible'); $('loadingMsg').textContent = 'loading...'; $('emptyMsg').style.display = 'none';
+      const files = [];
+      async function readDir(dirHandle) {
+        for await (const entry of dirHandle.values()) {
+          if (entry.kind === 'file' && (IMAGE_EXTS.test(entry.name) || VIDEO_EXT.test(entry.name))) {
+            const file = await entry.getFile(); files.push(file);
+            $('loadingMsg').textContent = `loading ${files.length}...`;
+          } else if (entry.kind === 'directory') {
+            await readDir(entry);
+          }
+        }
+      }
+      await readDir(sourceDirHandle);
+      $('loadingMsg').classList.remove('visible');
+      if (files.length) { addFiles(files); showToast(`Loaded ${files.length} file${files.length !== 1 ? 's' : ''} from ${sourceDirHandle.name}`, 'success'); }
+      else { render(); showToast('No media found in folder', 'error'); }
+    } catch (e) { if (e.name !== 'AbortError') showToast('Failed to open folder', 'error'); }
+  } else { $('folderInput').click(); }
+}
+
+$('openBtn').addEventListener('click', openFolder);
+$('openFolderHeader').addEventListener('click', openFolder);
+$('dropZone').addEventListener('click', e => { if (e.target === $('dropZone')) openFolder(); });
+$('folderInput').addEventListener('change', () => { if ($('folderInput').files.length) addFiles($('folderInput').files); $('folderInput').value = ''; });
+
+// ===== SELECTION ACTIONS =====
+$('selectBtn').addEventListener('click', toggleSelectMode);
+$('selAllBtn').addEventListener('click', () => { filtered.forEach(u => { if (!selected.has(u)) selected.set(u, 0); }); renumberSelected(); buildGrid(); updateSelBar(); $('playBtn').disabled = false; });
+$('deselBtn').addEventListener('click', () => { selected.clear(); buildGrid(); updateSelBar(); $('playBtn').disabled = true; });
+$('cancelBtn').addEventListener('click', () => { selected.clear(); toggleSelectMode(); });
+
+// Move
+$('moveExistBtn').addEventListener('click', async () => {
+  if (!selected.size) return;
+  if (!window.showDirectoryPicker) { downloadSelected(); return; }
+  try {
+    const dest = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'desktop' });
+    const sub = prompt(`Subfolder in "${dest.name}"? (blank = root)`, '');
+    let target = dest;
+    if (sub?.trim()) target = await dest.getDirectoryHandle(sub.trim(), { create: true });
+    let moved = 0, deleted = 0;
+    for (const [url] of selected) {
+      const meta = getMetaForURL(url);
+      if (!meta?.file) continue;
+      try {
+        await writeFileToDir(target, meta.name, meta.file);
+        moved++;
+        if (sourceDirHandle) { try { await sourceDirHandle.removeEntry(meta.name); deleted++; } catch (e) {} }
+      } catch (e) { console.error(`Failed: ${meta.name}`, e); }
+    }
+    for (const [url] of selected) {
+      const idx = allFiles.indexOf(url);
+      if (idx > -1) allFiles.splice(idx, 1);
+      const name = getNameForURL(url);
+      urlToName.delete(url);
+      fileMeta.delete(name);
+      URL.revokeObjectURL(url);
+    }
+    exitSelectMode(); render();
+    const destName = sub?.trim() ? `${dest.name}/${sub.trim()}` : dest.name;
+    showToast(deleted ? `Moved ${moved} to ${destName}` : `Copied ${moved} to ${destName} (source not deleted)`, 'success');
+  } catch (err) { if (err.name !== 'AbortError') showToast('Permission denied — use http:// not file://', 'error'); }
+});
+
+$('delBtn').addEventListener('click', () => {
+  if (!selected.size) return;
+  if (!confirm(`Remove ${selected.size} file${selected.size !== 1 ? 's' : ''} from view?`)) return;
+  for (const [url] of selected) {
+    const idx = allFiles.indexOf(url);
+    if (idx > -1) allFiles.splice(idx, 1);
+    const name = getNameForURL(url);
+    urlToName.delete(url);
+    fileMeta.delete(name);
+    URL.revokeObjectURL(url);
+  }
+  exitSelectMode(); render();
+  showToast('Removed from view', 'success');
+});
+
+$('deleteBtn').addEventListener('click', async () => {
+  if (!selected.size) return;
+  if (!sourceDirHandle) { showToast('Cannot delete — folder was opened via drag-drop, not Open Folder button', 'error'); return; }
+  if (!confirm(`Permanently delete ${selected.size} file${selected.size !== 1 ? 's' : ''} from disk?\n\nThis cannot be undone.`)) return;
+  let deleted = 0;
+  for (const [url] of selected) {
+    const name = getNameForURL(url);
+    try {
+      await sourceDirHandle.removeEntry(name);
+      deleted++;
+      const idx = allFiles.indexOf(url);
+      if (idx > -1) allFiles.splice(idx, 1);
+      urlToName.delete(url); fileMeta.delete(name); URL.revokeObjectURL(url);
+    } catch (e) { console.error(`Failed to delete ${name}:`, e); }
+  }
+  exitSelectMode(); render();
+  showToast(`Deleted ${deleted} file${deleted !== 1 ? 's' : ''} from disk`, 'success');
+});
+
+function downloadSelected() {
+  for (const [url] of selected) {
+    const a = document.createElement('a'); a.href = url; a.download = getNameForURL(url);
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+  showToast(`Downloading ${selected.size} file${selected.size !== 1 ? 's' : ''}`, 'success');
+}
+
+// ===== SEARCH (debounced) =====
+let searchTimer;
+$('search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(render, 200); });
+
+// ===== SORT =====
+$('sortRandom').addEventListener('click', () => { for (let i = allFiles.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [allFiles[i], allFiles[j]] = [allFiles[j], allFiles[i]]; } sortField = 'none'; render(); });
+$('sortField').addEventListener('change', e => { sortField = e.target.value; render(); });
+$('sortDir').addEventListener('click', () => { if (sortField === 'none') sortField = 'name'; sortAsc = !sortAsc; $('sortDir').textContent = sortAsc ? '↑' : '↓'; render(); });
+
+// ===== DRAG & DROP =====
+let dragC = 0;
+document.addEventListener('dragenter', e => { e.preventDefault(); dragC++; $('dropOverlay').classList.add('visible'); $('dropZone').classList.add('dragover'); });
+document.addEventListener('dragleave', e => { e.preventDefault(); dragC--; if (dragC <= 0) { dragC = 0; $('dropOverlay').classList.remove('visible'); $('dropZone').classList.remove('dragover'); } });
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', e => {
+  e.preventDefault(); dragC = 0; $('dropOverlay').classList.remove('visible'); $('dropZone').classList.remove('dragover');
+  const items = e.dataTransfer.items;
+  if (!items) { addFiles(e.dataTransfer.files); return; }
+  const allDropped = [], entries = [...items].map(i => i.webkitGetAsEntry?.()).filter(Boolean);
+  let readErrors = 0;
+  function readEntry(entry, cb) {
+    if (entry.isFile) entry.file(f => { allDropped.push(f); cb(); }, () => { readErrors++; cb(); });
+    else if (entry.isDirectory) { const r = entry.createReader(); function readBatch() { r.readEntries(b => { if (!b.length) { cb(); return; } let p = b.length; b.forEach(e => readEntry(e, () => { if (--p === 0) readBatch(); })); }, () => { readErrors++; cb(); }); } readBatch(); }
+    else cb();
+  }
+  let p = entries.length; if (!p) return;
+  entries.forEach(e => readEntry(e, () => { if (--p === 0) { addFiles(allDropped); if (readErrors > 0) showToast(`Skipped ${readErrors} unreadable file${readErrors !== 1 ? 's' : ''}`, 'error'); } }));
+});
+
+// ===== THEME =====
+function toggleTheme() {
+  document.body.classList.toggle('dark');
+  const isDark = document.body.classList.contains('dark');
+  $('themeBtn').textContent = isDark ? 'light' : 'dark';
+  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+}
+if (localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark'); $('themeBtn').textContent = 'light'; }
+$('themeBtn').addEventListener('click', toggleTheme);
+
+// ===== KEYBOARD SHORTCUTS =====
+document.addEventListener('keydown', e => {
+  // Image modal
+  if ($('modal').classList.contains('open')) {
+    if (e.key === 'Escape') closeModal();
+    if (e.key === 'ArrowLeft') modalNav(-1);
+    if (e.key === 'ArrowRight') modalNav(1);
+    if (e.key === 'ArrowUp') { e.preventDefault(); applyZoom(0.25); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); applyZoom(-0.25); }
+    return;
+  }
+  // Video player
+  if ($('playerOverlay').classList.contains('visible')) {
+    if (e.key === 'Escape') stopPlayback();
+    if (e.key === ' ') { e.preventDefault(); $('playerVideo').paused ? $('playerVideo').play().catch(()=>{}) : $('playerVideo').pause(); }
+    if (e.key === 'ArrowLeft') { if (!playlist.length) return; currentIdx = (currentIdx - 1 + playlist.length) % playlist.length; loadVideo(); }
+    if (e.key === 'ArrowRight') { if (!playlist.length) return; currentIdx = (currentIdx + 1) % playlist.length; loadVideo(); }
+    if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); }
+    if (e.key === 'm' || e.key === 'M') { e.preventDefault(); $('playerVideo').muted = !$('playerVideo').muted; $('muteBtn').classList.toggle('active', $('playerVideo').muted); updateVolFill(); }
+    if (e.key === '[') { e.preventDefault(); setPointA(); }
+    if (e.key === ']') { e.preventDefault(); setPointB(); }
+    if (e.key === 'Backspace' && abA !== null) { e.preventDefault(); clearAB(); }
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const focusable = $('playerOverlay').querySelectorAll('button:not([disabled]), [tabindex]');
+      if (!focusable.length) return;
+      const list = [...focusable]; const idx = list.indexOf(document.activeElement);
+      if (e.shiftKey) list[(idx - 1 + list.length) % list.length].focus();
+      else list[(idx + 1) % list.length].focus();
+    }
+    return;
+  }
+  // Grid keyboard navigation
+  const focused = document.activeElement;
+  const isCard = focused && focused.classList.contains('thumb');
+  if (isCard && ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter',' '].includes(e.key)) {
+    e.preventDefault();
+    if (e.key === 'Enter' || e.key === ' ') { const i = parseInt(focused.id.replace('t-','')); if (!isNaN(i)) handleClick(e, i); return; }
+    const cards = [...$('grid').querySelectorAll('.thumb')];
+    const idx = cards.indexOf(focused);
+    if (idx === -1) return;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      const dir = e.key === 'ArrowRight' ? 1 : -1;
+      const next = cards[idx + dir];
+      if (next) next.focus();
+    } else {
+      // Up/down: find nearest card by position
+      const rect = focused.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+      const dir = e.key === 'ArrowDown' ? 1 : -1;
+      let best = null, bestDist = Infinity;
+      for (const c of cards) {
+        if (c === focused) continue;
+        const r = c.getBoundingClientRect();
+        const ry = r.top + r.height / 2;
+        if (dir > 0 && ry <= cy) continue;
+        if (dir < 0 && ry >= cy) continue;
+        const rx = r.left + r.width / 2;
+        const dist = Math.abs(rx - cx) + Math.abs(ry - cy) * 0.5;
+        if (dist < bestDist) { bestDist = dist; best = c; }
+      }
+      if (best) best.focus();
+    }
+    return;
+  }
+  // Gallery shortcuts
+  if (document.activeElement === $('search')) return;
+  if (e.key === 's' || e.key === 'S') { e.preventDefault(); toggleSelectMode(); }
+  if (e.key === 'f' || e.key === 'F') { e.preventDefault(); openFolder(); }
+  if (e.key === '?') { e.preventDefault(); toggleShortcuts(); }
+  if (e.key === 'Escape') {
+    if ($('shortcutsOverlay').classList.contains('visible')) { toggleShortcuts(); }
+    else if (selectMode) { exitSelectMode(); render(); }
+    else { $('search').value = ''; render(); }
+  }
+});
+
+// ===== TOAST =====
+function showToast(msg, type = '') { const t = $('toast'); t.textContent = msg; t.className = 'toast show ' + type; clearTimeout(t._timer); t._timer = setTimeout(() => t.className = 'toast', 3000); }
+
+// ===== SHORTCUTS OVERLAY =====
+function toggleShortcuts() { $('shortcutsOverlay').classList.toggle('visible'); }
+$('shortcutsClose').addEventListener('click', toggleShortcuts);
+$('shortcutsOverlay').addEventListener('click', e => { if (e.target === $('shortcutsOverlay')) toggleShortcuts(); });
+
+// ===== CLEANUP =====
+window.addEventListener('beforeunload', () => {
+  for (const [, meta] of fileMeta) URL.revokeObjectURL(meta.url);
+  urlToName.clear();
+});
+
+render();
+</script>
+</body>
+</html>
