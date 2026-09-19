@@ -771,9 +771,11 @@
   }
   .player-video { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; }
   .player-video video { max-width: calc(100vw - 40px); max-height: calc(100vh - 100px); }
-  .center-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border-radius: 50%; background: rgba(0,0,0,0.35); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, background 0.2s; z-index: 5; opacity: 0; pointer-events: none; }
-  .player-overlay:not(.playing) .center-play { opacity: 1; pointer-events: auto; }
-  .player-overlay.playing .center-play { opacity: 0; }
+  .center-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border-radius: 50%; background: rgba(0,0,0,0.35); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.2s, background 0.2s, opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1); z-index: 5; opacity: 0; pointer-events: none; }
+  /* Center play only before first play — not on pause (use bottom bar) */
+  .player-overlay:not(.playing):not(.started) .center-play { opacity: 1; pointer-events: auto; }
+  .player-overlay.playing .center-play,
+  .player-overlay.started .center-play { opacity: 0; pointer-events: none; }
   .center-play:hover { transform: translate(-50%, -50%) scale(1.08); background: rgba(0,0,0,0.5); }
   .center-play::after { content: ''; width: 0; height: 0; border-left: 20px solid #fff; border-top: 12px solid transparent; border-bottom: 12px solid transparent; margin-left: 4px; }
   .spinner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.15); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; opacity: 0; pointer-events: none; z-index: 5; transition: opacity 0.2s; }
@@ -874,8 +876,10 @@
     .ctrl { padding: 10px 12px; font-size: 14px; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
     .vol-slider { width: 80px; height: 6px; }
     .vol-fill::after { opacity: 1 !important; width: 14px; height: 14px; }
-    .center-play { width: 72px; height: 72px; opacity: 1 !important; pointer-events: auto !important; }
-    .player-overlay.playing .center-play { opacity: 0 !important; pointer-events: none !important; }
+    .center-play { width: 72px; height: 72px; }
+    .player-overlay:not(.playing):not(.started) .center-play { opacity: 1; pointer-events: auto; }
+    .player-overlay.playing .center-play,
+    .player-overlay.started .center-play { opacity: 0 !important; pointer-events: none !important; }
     .player-top .back { padding: 10px 18px; font-size: 13px; min-height: 44px; }
     .player-controls { padding: 4px 0; gap: 8px; }
     /* Gallery touch targets */
@@ -978,8 +982,8 @@
     <g id="i-x" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></g>
     <g id="i-play" fill="currentColor" stroke="none"><path d="M9 6.5v11l9-5.5-9-5.5z"/></g>
     <g id="i-pause" fill="currentColor" stroke="none"><rect x="7" y="6" width="3.2" height="12" rx="0.4"/><rect x="13.8" y="6" width="3.2" height="12" rx="0.4"/></g>
-    <g id="i-skip-back" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8 6.5v11l8-5.5-8-5.5z"/><path d="M6 6.5v11" stroke-linecap="round"/></g>
-    <g id="i-skip-fwd" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M16 6.5v11l-8-5.5 8-5.5z"/><path d="M18 6.5v11" stroke-linecap="round"/></g>
+    <g id="i-skip-back" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M14.5 6.5L8 12l6.5 5.5V6.5z"/><path d="M6 6.5v11" stroke-linecap="round"/></g>
+    <g id="i-skip-fwd" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M9.5 6.5L16 12l-6.5 5.5V6.5z"/><path d="M18 6.5v11" stroke-linecap="round"/></g>
     <g id="i-plus" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></g>
     <g id="i-minus" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M6 12h12"/></g>
     <g id="i-zoom-in" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4M11 8.5v5M8.5 11h5"/></g>
@@ -1952,6 +1956,8 @@ function loadVideo() {
   const url = playlist[currentIdx];
   $('playerVideo').src = url;
   $('playerVideo').load();
+  // Center play may show until this clip actually plays; hide again on pause after start
+  $('playerOverlay').classList.remove('started');
   $('playerVideo').play().catch(() => {});
   $('playerInfo').textContent = `${currentIdx+1}/${playlist.length} — ${getMetaForURL(url)?.path || getNameForURL(url)}`;
   $('playerOverlay').classList.add('playing');
@@ -1961,7 +1967,7 @@ function loadVideo() {
 function stopPlayback() {
   playing = false;
   $('playerVideo').pause();
-  $('playerOverlay').classList.remove('visible', 'playing');
+  $('playerOverlay').classList.remove('visible', 'playing', 'started');
   document.body.style.overflow = '';
   if (_lastFocused) { _lastFocused.focus(); _lastFocused = null; }
 }
@@ -1972,6 +1978,10 @@ function updatePPBtn() {
   $('playPauseBtn').setAttribute('aria-label', paused ? 'Play' : 'Pause');
   $('playerOverlay').classList.toggle('playing', !paused);
   if (paused) { showControls(); clearTimeout(controlsTimer); } else { showControls(); }
+}
+
+function markPlaybackStarted() {
+  $('playerOverlay').classList.add('started');
 }
 
 _playerVideo.addEventListener('timeupdate', () => {
@@ -2021,7 +2031,7 @@ $('playerVideo').addEventListener('error', () => {
   if (currentIdx < playlist.length - 1) { currentIdx++; loadVideo(); } else stopPlayback();
 });
 
-$('playerVideo').addEventListener('play', updatePPBtn);
+$('playerVideo').addEventListener('play', () => { markPlaybackStarted(); updatePPBtn(); });
 $('playerVideo').addEventListener('pause', updatePPBtn);
 $('playerVideo').addEventListener('waiting', () => $('spinner').classList.add('visible'));
 $('playerVideo').addEventListener('playing', () => $('spinner').classList.remove('visible'));
