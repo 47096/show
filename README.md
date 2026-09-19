@@ -4,7 +4,7 @@ A minimal media browser for images and videos. Single HTML file, no server, no u
 
 ## Features
 
-- **Unified gallery** — images and videos in one grid
+- **Unified gallery** — images and videos in one Pinterest-style masonry grid (true aspect ratios)
 - **Image viewer** — zoom (25%–500%), slideshow with adjustable speed
 - **Video player** — seek, volume, loop modes, A-B repeat, playback speed, shuffle, PiP, fullscreen
 - **Type filter** — All / Images / Videos toggle
