@@ -274,28 +274,71 @@
     color: var(--text3);
     white-space: nowrap;
   }
-  .header-sort { display: flex; align-items: center; gap: 2px; }
+  .header-sort { display: flex; align-items: center; gap: 2px; position: relative; }
   .sort-label { display: none; }
-  .header-sort select {
+  .sort-menu-wrap { position: relative; }
+  .sort-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     height: 32px;
-    padding: 0 22px 0 8px;
+    padding: 0 8px;
     border: none;
+    border-radius: 6px;
     background: transparent;
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
     font-size: 12px;
     color: var(--text2);
     cursor: pointer;
-    outline: none;
-    border-radius: 0;
-    -webkit-appearance: none;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%236e6e6e'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 6px center;
   }
-  .header-sort select:hover { color: var(--text); }
-  .header-sort select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .dark .header-sort select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%238a8a8a'/%3E%3C/svg%3E"); }
+  .sort-menu-btn:hover,
+  .sort-menu-btn[aria-expanded="true"] { color: var(--text); background: var(--bg2); }
+  .sort-menu-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .sort-menu-btn .icon { width: 12px; height: 12px; opacity: 0.7; }
+  .sort-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 140px;
+    padding: 4px;
+    margin: 0;
+    list-style: none;
+    background: var(--bg);
+    border: 1px solid var(--line, var(--border));
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    z-index: 60;
+  }
+  .dark .sort-menu { box-shadow: 0 8px 24px rgba(0,0,0,0.45); }
+  .sort-menu.open { display: block; }
+  .sort-menu li button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    height: 32px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--text2);
+    cursor: pointer;
+    text-align: left;
+  }
+  .sort-menu li button:hover { background: var(--bg2); color: var(--text); }
+  .sort-menu li button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .sort-menu li button[aria-selected="true"] { color: var(--text); font-weight: 500; }
+  .sort-menu li button[aria-selected="true"]::after {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
   .sort-dir, .sort-random {
     display: inline-flex;
     align-items: center;
@@ -449,7 +492,8 @@
   }
   .btn:focus-visible, .tf-btn:focus-visible, .sort-dir:focus-visible, .sort-random:focus-visible, .drop-zone-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .drop-zone:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-  .header-sort select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .header-sort select:focus-visible,
+  .sort-menu-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .modal .nav:focus-visible, .modal .zoom-btn:focus-visible, .modal .close:focus-visible, .modal .slideshow-bar .ss-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .modal .close:focus-visible, .modal .nav:focus-visible, .modal .zoom-btn:focus-visible, .modal .slideshow-bar .ss-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 
@@ -839,7 +883,8 @@
     .drop-zone-btn { height: 48px; padding: 0 32px; font-size: 14px; }
     .landing-brand { font-size: 36px; }
     .header-search input { height: 40px; font-size: 14px; }
-    .header-sort select { height: 40px; font-size: 13px; }
+    .sort-menu-btn { height: 40px; font-size: 13px; }
+    .sort-dir, .sort-random { min-height: 40px; height: 40px; font-size: 13px; }
     .btn, .tf-btn, .sort-dir, .sort-random { min-height: 40px; height: 40px; font-size: 13px; }
   }
 
@@ -1008,15 +1053,23 @@
     </div>
     <div class="header-secondary">
       <div class="header-sort">
-        <label class="sort-label" for="sortField">sort:</label>
-        <select id="sortField" aria-label="Sort field">
-          <option value="name">name</option>
-          <option value="date">date</option>
-          <option value="size">size</option>
-          <option value="type">type</option>
-          <option value="duration">duration</option>
-          <option value="resolution">resolution</option>
-        </select>
+        <span class="sort-label">sort:</span>
+        <div class="sort-menu-wrap">
+          <button type="button" class="sort-menu-btn" id="sortMenuBtn"
+                  aria-haspopup="listbox" aria-expanded="false" aria-label="Sort field"
+                  title="Sort field">
+            <span id="sortMenuLabel">name</span>
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev-down"></use></svg>
+          </button>
+          <ul class="sort-menu" id="sortMenu" role="listbox" aria-label="Sort field" tabindex="-1">
+            <li><button type="button" role="option" data-sort="name" aria-selected="true">name</button></li>
+            <li><button type="button" role="option" data-sort="date" aria-selected="false">date</button></li>
+            <li><button type="button" role="option" data-sort="size" aria-selected="false">size</button></li>
+            <li><button type="button" role="option" data-sort="type" aria-selected="false">type</button></li>
+            <li><button type="button" role="option" data-sort="duration" aria-selected="false">duration</button></li>
+            <li><button type="button" role="option" data-sort="resolution" aria-selected="false">resolution</button></li>
+          </ul>
+        </div>
         <button class="sort-dir icon-btn" id="sortDir" title="Toggle sort direction" aria-label="Sort ascending"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev-up"></use></svg></button>
         <button class="sort-random icon-btn" id="sortRandom" aria-label="Randomize order" title="Randomize order"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-random"></use></svg></button>
       </div>
@@ -2266,9 +2319,94 @@ let searchTimer;
 $('search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(render, 200); });
 
 // ===== SORT =====
-$('sortRandom').addEventListener('click', () => { for (let i = allFiles.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [allFiles[i], allFiles[j]] = [allFiles[j], allFiles[i]]; } sortField = 'none'; render(); });
-$('sortField').addEventListener('change', e => { sortField = e.target.value; render(); });
-$('sortDir').addEventListener('click', () => { if (sortField === 'none') sortField = 'name'; sortAsc = !sortAsc; setBtnIcon($('sortDir'), sortAsc ? 'i-chev-up' : 'i-chev-down'); $('sortDir').setAttribute('aria-label', sortAsc ? 'Sort ascending' : 'Sort descending'); render(); });
+$('sortRandom').addEventListener('click', () => {
+  for (let i = allFiles.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [allFiles[i], allFiles[j]] = [allFiles[j], allFiles[i]]; }
+  sortField = 'none';
+  updateSortMenuUI();
+  render();
+});
+$('sortDir').addEventListener('click', () => {
+  if (sortField === 'none') sortField = 'name';
+  sortAsc = !sortAsc;
+  setBtnIcon($('sortDir'), sortAsc ? 'i-chev-up' : 'i-chev-down');
+  $('sortDir').setAttribute('aria-label', sortAsc ? 'Sort ascending' : 'Sort descending');
+  updateSortMenuUI();
+  render();
+});
+
+// Custom sort menu — same sortField state as before
+function updateSortMenuUI() {
+  const label = $('sortMenuLabel');
+  if (label) label.textContent = sortField === 'none' ? 'random' : sortField;
+  const menu = $('sortMenu');
+  if (!menu) return;
+  menu.querySelectorAll('[data-sort]').forEach(btn => {
+    const on = btn.dataset.sort === sortField;
+    btn.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+}
+
+function setSortMenuOpen(open) {
+  const menu = $('sortMenu');
+  const btn = $('sortMenuBtn');
+  if (!menu || !btn) return;
+  menu.classList.toggle('open', open);
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) {
+    const selected = menu.querySelector('[aria-selected="true"]') || menu.querySelector('[data-sort]');
+    if (selected) selected.focus();
+  }
+}
+
+function chooseSortField(field) {
+  sortField = field;
+  updateSortMenuUI();
+  setSortMenuOpen(false);
+  $('sortMenuBtn')?.focus();
+  render();
+}
+
+$('sortMenuBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const menu = $('sortMenu');
+  setSortMenuOpen(!menu.classList.contains('open'));
+});
+
+$('sortMenu').addEventListener('click', e => {
+  const btn = e.target.closest('[data-sort]');
+  if (!btn) return;
+  e.stopPropagation();
+  chooseSortField(btn.dataset.sort);
+});
+
+$('sortMenu').addEventListener('keydown', e => {
+  const items = [...$('sortMenu').querySelectorAll('[data-sort]')];
+  const idx = items.indexOf(document.activeElement);
+  if (e.key === 'Escape') { e.preventDefault(); setSortMenuOpen(false); $('sortMenuBtn')?.focus(); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); items[Math.min(items.length - 1, idx + 1)]?.focus(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); items[Math.max(0, idx - 1)]?.focus(); }
+  else if (e.key === 'Home') { e.preventDefault(); items[0]?.focus(); }
+  else if (e.key === 'End') { e.preventDefault(); items[items.length - 1]?.focus(); }
+  else if (e.key === 'Enter' || e.key === ' ') {
+    if (document.activeElement?.dataset?.sort) {
+      e.preventDefault();
+      chooseSortField(document.activeElement.dataset.sort);
+    }
+  }
+});
+
+$('sortMenuBtn').addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    setSortMenuOpen(true);
+  }
+});
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.sort-menu-wrap')) setSortMenuOpen(false);
+});
+
+updateSortMenuUI();
 
 // ===== DRAG & DROP =====
 let dragC = 0;
