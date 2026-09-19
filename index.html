@@ -726,13 +726,21 @@ function render() {
   const hasFiles = allFiles.length > 0;
   $('landing').classList.toggle('hidden', hasFiles);
   $('galleryView').classList.toggle('visible', hasFiles);
-  $('count').textContent = `${filtered.length} file${filtered.length !== 1 ? 's' : ''}`;
+  $('count').textContent = formatCountLabel();
   updateEmptyState(hasFiles, q, filtered.length);
   updatePlayBtn();
   $('slideshowBtn').disabled = !filtered.some(u => isImage(u));
 
   buildGrid();
   updateSelBar();
+}
+
+function formatCountLabel() {
+  const n = filtered.length;
+  const total = allFiles.length;
+  const filtering = activeFilter !== 'all' || $('search').value.trim() !== '';
+  if (filtering && total > 0 && n !== total) return `${n} of ${total} files`;
+  return `${n} file${n !== 1 ? 's' : ''}`;
 }
 
 function updateEmptyState(hasFiles, query, filteredCount) {
@@ -773,6 +781,7 @@ function updateEmptyState(hasFiles, query, filteredCount) {
         b.classList.toggle('active', on);
         b.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
+      window.scrollTo(0, 0);
       render();
     });
   });
@@ -818,7 +827,10 @@ function cardHTML(src, i) {
   }
 }
 
-// Virtual scroll
+// Virtual scroll — keep appending while the sentinel is near the viewport.
+// IntersectionObserver alone stalls after a filter change: it only fires when
+// intersection *changes*, so a short masonry wall can leave the sentinel in
+// view without ever loading the rest of the list.
 const BATCH = 50;
 let renderedEnd = 0, loadingMore = false;
 
@@ -847,21 +859,41 @@ function appendBatch() {
   }
 }
 
+function sentinelNearViewport(margin) {
+  const m = margin == null ? 400 : margin;
+  const rect = _sentinel.getBoundingClientRect();
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  return rect.top < vh + m;
+}
+
+function fillGrid() {
+  if (loadingMore) return;
+  loadingMore = true;
+  try {
+    const maxRounds = Math.ceil(filtered.length / BATCH) + 2;
+    let rounds = 0;
+    while (renderedEnd < filtered.length && rounds++ < maxRounds) {
+      if (!sentinelNearViewport()) break;
+      appendBatch();
+    }
+  } finally {
+    loadingMore = false;
+  }
+}
+
 function buildGrid() {
   $('grid').innerHTML = '';
   renderedEnd = 0;
   appendBatch();
+  fillGrid();
 }
 
-// Load more when sentinel enters viewport
+// Load more when sentinel enters viewport, and when the user scrolls
 const _sentinel = $('scrollSentinel');
-const _gridObserver = new IntersectionObserver(entries => {
-  if (entries[0].isIntersecting && renderedEnd < filtered.length && !loadingMore) {
-    loadingMore = true;
-    requestAnimationFrame(() => { appendBatch(); loadingMore = false; });
-  }
-}, { rootMargin: '400px' });
+const _gridObserver = new IntersectionObserver(() => { fillGrid(); }, { rootMargin: '400px' });
 _gridObserver.observe(_sentinel);
+window.addEventListener('scroll', () => { fillGrid(); }, { passive: true });
+window.addEventListener('resize', () => { fillGrid(); }, { passive: true });
 
 function handleClick(e, i) {
   if (selectMode) {
@@ -1347,6 +1379,8 @@ $('typeFilter').addEventListener('click', e => {
     b.classList.toggle('active', on);
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
+  // Fresh top-of-list view after a type switch; fillGrid loads the rest
+  window.scrollTo(0, 0);
   render();
 });
 
