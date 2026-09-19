@@ -402,8 +402,9 @@ const VIDEO_EXT = /\.(mp4|webm|ogg|mov|mkv|avi|m4v|flv|wmv|m2ts|ts|3gp)$/i;
 let allFiles = [], filtered = [], currentModalUrl = null, selectMode = false;
 let sortField = 'name', sortAsc = true, activeFilter = 'all'; // all | image | video
 const selected = new Map(); // url → order number
-const fileMeta = new Map(); // name → { name, file, url, type, duration?, thumbUrl?, videoWidth?, videoHeight? }
-const urlToName = new Map(); // url → name
+// path (relative to opened root, e.g. "sub/photo.jpg") → meta; never key by basename alone
+const fileMeta = new Map();
+const urlToPath = new Map(); // blob url → relative path
 let sourceDirHandle = null;
 
 const $ = id => document.getElementById(id);
@@ -417,8 +418,18 @@ let filteredIndex = new Map();
 function rebuildFilteredIndex() { filteredIndex.clear(); filtered.forEach((url, i) => filteredIndex.set(url, i)); }
 
 function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
-function getNameForURL(url) { return urlToName.get(url) || url.split('/').pop(); }
-function getMetaForURL(url) { return fileMeta.get(urlToName.get(url)) || null; }
+function getPathForURL(url) { return urlToPath.get(url) || null; }
+function getMetaForURL(url) { const p = urlToPath.get(url); return p != null ? (fileMeta.get(p) || null) : null; }
+function getBaseName(path) { const i = path.lastIndexOf('/'); return i > -1 ? path.slice(i + 1) : path; }
+function getNameForURL(url) {
+  const meta = getMetaForURL(url);
+  return meta?.name || getBaseName(urlToPath.get(url) || url.split('/').pop() || '');
+}
+// Label for cards: full relative path when nested, basename at root
+function getDisplayLabel(url) {
+  const path = urlToPath.get(url);
+  return path || getNameForURL(url);
+}
 function isImage(url) { return getMetaForURL(url)?.type === 'image'; }
 function isVideo(url) { return getMetaForURL(url)?.type === 'video'; }
 function getExt(name) { const dot = name.lastIndexOf('.'); return dot > -1 ? name.slice(dot + 1).toLowerCase() : ''; }
@@ -426,21 +437,51 @@ function formatDur(s) { const h = Math.floor(s/3600), m = Math.floor((s%3600)/60
 function formatTime(s) { const m = Math.floor(s/60), sec = Math.floor(s%60); return m + ':' + String(sec).padStart(2, '0'); }
 
 // ===== FILE LOADING =====
-function addFiles(files) {
-  for (const file of files) {
-    if (fileMeta.has(file.name)) continue;
+// Accepts File objects, or { file, path } when the loader already knows the relative path.
+function normalizeDropPath(file, explicitPath) {
+  if (explicitPath) return explicitPath;
+  const rel = file.webkitRelativePath || '';
+  return rel || file.name;
+}
+
+function addFiles(items) {
+  for (const item of items) {
+    const file = item instanceof File ? item : item.file;
+    if (!file) continue;
+    const path = normalizeDropPath(file, item instanceof File ? null : item.path);
+    if (fileMeta.has(path)) continue;
     let type = null;
     if (IMAGE_EXTS.test(file.name)) type = 'image';
     else if (VIDEO_EXT.test(file.name)) type = 'video';
     else continue;
     const url = URL.createObjectURL(file);
-    const meta = { name: file.name, file, url, type, duration: null, thumbUrl: null, videoWidth: 320, videoHeight: 180, lastModified: file.lastModified || 0 };
-    fileMeta.set(file.name, meta);
-    urlToName.set(url, file.name);
+    const meta = {
+      name: file.name,
+      path,
+      file,
+      url,
+      type,
+      duration: null,
+      thumbUrl: null,
+      videoWidth: 320,
+      videoHeight: 180,
+      lastModified: file.lastModified || 0
+    };
+    fileMeta.set(path, meta);
+    urlToPath.set(url, path);
     allFiles.push(url);
   }
   render();
   loadVideoMetadata();
+}
+
+function dropFileFromMemory(url) {
+  const idx = allFiles.indexOf(url);
+  if (idx > -1) allFiles.splice(idx, 1);
+  const path = urlToPath.get(url);
+  if (path != null) fileMeta.delete(path);
+  urlToPath.delete(url);
+  URL.revokeObjectURL(url);
 }
 
 async function loadVideoMetadata() {
@@ -497,6 +538,18 @@ async function loadVideoMetadata() {
   await Promise.all(Array.from({length: CONCURRENT}, processNext));
 }
 
+// Walk path segments under a directory handle. create=true for write/move dest.
+async function resolveParentDir(rootHandle, path, create = false) {
+  const parts = String(path).split('/').filter(Boolean);
+  if (!parts.length) throw new Error('empty path');
+  const fileName = parts.pop();
+  let dir = rootHandle;
+  for (const part of parts) {
+    dir = await dir.getDirectoryHandle(part, { create });
+  }
+  return { dir, fileName };
+}
+
 async function writeFileToDir(dirHandle, fileName, fileObj) {
   const handle = await dirHandle.getFileHandle(fileName, { create: true });
   const writable = await handle.createWritable();
@@ -505,12 +558,24 @@ async function writeFileToDir(dirHandle, fileName, fileObj) {
   await writable.close();
 }
 
+// Write using full relative path under dest (creates intermediate folders).
+async function writeFileToPath(rootHandle, path, fileObj) {
+  const { dir, fileName } = await resolveParentDir(rootHandle, path, true);
+  await writeFileToDir(dir, fileName, fileObj);
+}
+
+// Delete using full relative path (does not invent missing folders).
+async function removeAtPath(rootHandle, path) {
+  const { dir, fileName } = await resolveParentDir(rootHandle, path, false);
+  await dir.removeEntry(fileName);
+}
+
 // ===== SORT & FILTER =====
 function sortFiles(urls) {
   if (sortField === 'none') return urls;
   return urls.slice().sort((a, b) => {
     let cmp = 0;
-    if (sortField === 'name') cmp = getNameForURL(a).localeCompare(getNameForURL(b));
+    if (sortField === 'name') cmp = (getMetaForURL(a)?.path || getNameForURL(a)).localeCompare(getMetaForURL(b)?.path || getNameForURL(b));
     else if (sortField === 'date') { const da = getMetaForURL(a)?.lastModified || getMetaForURL(a)?.file?.lastModified || 0; const db = getMetaForURL(b)?.lastModified || getMetaForURL(b)?.file?.lastModified || 0; cmp = da - db; }
     else if (sortField === 'size') { const sa = getMetaForURL(a)?.file?.size || 0; const sb = getMetaForURL(b)?.file?.size || 0; cmp = sa - sb; }
     else if (sortField === 'type') { cmp = getExt(getNameForURL(a)).localeCompare(getExt(getNameForURL(b))); }
@@ -527,7 +592,10 @@ function applyFilter(urls) {
 
 function render() {
   const q = $('search').value.toLowerCase();
-  const matched = allFiles.filter(url => getNameForURL(url).toLowerCase().includes(q));
+  const matched = allFiles.filter(url => {
+    const path = getMetaForURL(url)?.path || getNameForURL(url);
+    return path.toLowerCase().includes(q);
+  });
   const typeFiltered = applyFilter(matched);
   filtered = sortFiles(typeFiltered);
   rebuildFilteredIndex();
@@ -542,7 +610,7 @@ function render() {
   $('galleryView').classList.toggle('visible', hasFiles);
   $('count').textContent = `${filtered.length} file${filtered.length !== 1 ? 's' : ''}`;
   $('emptyMsg').style.display = filtered.length ? 'none' : '';
-  $('playBtn').disabled = selected.size === 0 && !filtered.some(u => isVideo(u));
+  updatePlayBtn();
   $('slideshowBtn').disabled = !filtered.some(u => isImage(u));
 
   buildGrid();
@@ -550,14 +618,22 @@ function render() {
 }
 
 // ===== GRID =====
+function updatePlayBtn() {
+  const source = selected.size > 0 ? [...selected.keys()] : filtered;
+  $('playBtn').disabled = !source.some(u => isVideo(u));
+}
+
 function cardHTML(src, i) {
   const meta = getMetaForURL(src);
   const sel = selected.has(src) ? ' selected' : '';
   const num = selected.get(src);
   const vid = meta?.type === 'video';
   const cls = vid ? 'video-thumb' : 'image-thumb';
-
+  const path = meta?.path || getNameForURL(src);
+  const label = getDisplayLabel(src);
   const alt = escapeHtml(getNameForURL(src));
+  const labelHtml = escapeHtml(label);
+  const pathAttr = escapeHtml(path);
   let thumb, extra = '';
   if (vid) {
     const ar = meta?.videoWidth && meta?.videoHeight ? `${meta.videoWidth}/${meta.videoHeight}` : '16/9';
@@ -566,15 +642,15 @@ function cardHTML(src, i) {
       : `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect fill='%23f0f0f0' width='320' height='180'/%3E%3Ctext x='160' y='95' text-anchor='middle' fill='%23ccc' font-size='14' font-family='monospace'%3Eloading...%3C/text%3E%3C/svg%3E" alt="${alt}">`;
     const dur = meta?.duration ? `<div class="dur">${formatDur(meta.duration)}</div>` : '';
     extra = `<div class="play-icon"></div>${dur}`;
-    return `<div class="thumb ${cls}${sel}" id="t-${i}" data-url="${src}" tabindex="0" style="aspect-ratio:${ar}" onclick="handleClick(event,${i})">
+    return `<div class="thumb ${cls}${sel}" id="t-${i}" data-url="${src}" data-path="${pathAttr}" tabindex="0" title="${pathAttr}" style="aspect-ratio:${ar}" onclick="handleClick(event,${i})">
       <div class="badge">${num !== undefined ? num : '0'}</div>${thumb}${extra}
-      <div class="name">${escapeHtml(getNameForURL(src))}</div>
+      <div class="name">${labelHtml}</div>
     </div>`;
   } else {
     thumb = `<img src="${src}" alt="${alt}" loading="lazy">`;
-    return `<div class="thumb ${cls}${sel}" id="t-${i}" data-url="${src}" tabindex="0" onclick="handleClick(event,${i})">
+    return `<div class="thumb ${cls}${sel}" id="t-${i}" data-url="${src}" data-path="${pathAttr}" tabindex="0" title="${pathAttr}" onclick="handleClick(event,${i})">
       <div class="badge">${num !== undefined ? num : '0'}</div>${thumb}
-      <div class="name">${escapeHtml(getNameForURL(src))}</div>
+      <div class="name">${labelHtml}</div>
     </div>`;
   }
 }
@@ -643,7 +719,7 @@ function toggleSelection(url, index) {
   else { selected.set(url, 0); el.classList.add('selected'); }
   renumberSelected();
   updateSelBar();
-  $('playBtn').disabled = selected.size === 0;
+  updatePlayBtn();
 }
 
 function renumberSelected() {
@@ -661,7 +737,7 @@ function toggleSelectMode() {
   $('selectBtn').classList.toggle('active', selectMode);
   $('selectBtn').textContent = selectMode ? 'Selecting...' : 'Select';
   if (!selectMode) selected.clear();
-  $('playBtn').disabled = selected.size === 0;
+  updatePlayBtn();
   buildGrid();
   updateSelBar();
 }
@@ -671,7 +747,7 @@ function exitSelectMode() {
   document.body.classList.remove('sel-mode', 'has-sel-bar');
   $('selectBtn').classList.remove('active');
   $('selectBtn').textContent = 'Select';
-  $('playBtn').disabled = true;
+  updatePlayBtn();
   buildGrid();
 }
 
@@ -704,7 +780,8 @@ function openModal(url) {
   $('modalImg').alt = getNameForURL(url);
   const imageUrls = getImageUrls();
   const imgIdx = imageUrls.indexOf(url);
-  $('modalInfo').textContent = `${imgIdx + 1} / ${imageUrls.length}  —  ${getNameForURL(url)}`;
+  const path = getMetaForURL(url)?.path || getNameForURL(url);
+  $('modalInfo').textContent = `${imgIdx + 1} / ${imageUrls.length}  —  ${path}`;
   $('modal').classList.add('open');
   resetZoom();
 }
@@ -779,7 +856,7 @@ function loadVideo() {
   $('playerVideo').src = url;
   $('playerVideo').load();
   $('playerVideo').play().catch(() => {});
-  $('playerInfo').textContent = `${currentIdx+1}/${playlist.length} — ${getNameForURL(url)}`;
+  $('playerInfo').textContent = `${currentIdx+1}/${playlist.length} — ${getMetaForURL(url)?.path || getNameForURL(url)}`;
   $('playerOverlay').classList.add('playing');
   updatePPBtn();
 }
@@ -956,22 +1033,25 @@ async function openFolder() {
       const newHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'desktop' });
       for (const [, meta] of fileMeta) URL.revokeObjectURL(meta.url);
       allFiles.length = 0; filtered.length = 0;
-      fileMeta.clear(); urlToName.clear();
+      fileMeta.clear(); urlToPath.clear();
       selected.clear(); selectMode = false;
       sourceDirHandle = newHandle;
       $('loadingMsg').classList.add('visible'); $('loadingMsg').textContent = 'loading...'; $('emptyMsg').style.display = 'none';
+      // { file, path } with path relative to sourceDirHandle (root files: "name.jpg", nested: "sub/name.jpg")
       const files = [];
-      async function readDir(dirHandle) {
+      async function readDir(dirHandle, relPath) {
         for await (const entry of dirHandle.values()) {
+          const path = relPath ? `${relPath}/${entry.name}` : entry.name;
           if (entry.kind === 'file' && (IMAGE_EXTS.test(entry.name) || VIDEO_EXT.test(entry.name))) {
-            const file = await entry.getFile(); files.push(file);
+            const file = await entry.getFile();
+            files.push({ file, path });
             $('loadingMsg').textContent = `loading ${files.length}...`;
           } else if (entry.kind === 'directory') {
-            await readDir(entry);
+            await readDir(entry, path);
           }
         }
       }
-      await readDir(sourceDirHandle);
+      await readDir(sourceDirHandle, '');
       $('loadingMsg').classList.remove('visible');
       if (files.length) { addFiles(files); showToast(`Loaded ${files.length} file${files.length !== 1 ? 's' : ''} from ${sourceDirHandle.name}`, 'success'); }
       else { render(); showToast('No media found in folder', 'error'); }
@@ -986,11 +1066,11 @@ $('folderInput').addEventListener('change', () => { if ($('folderInput').files.l
 
 // ===== SELECTION ACTIONS =====
 $('selectBtn').addEventListener('click', toggleSelectMode);
-$('selAllBtn').addEventListener('click', () => { filtered.forEach(u => { if (!selected.has(u)) selected.set(u, 0); }); renumberSelected(); buildGrid(); updateSelBar(); $('playBtn').disabled = false; });
-$('deselBtn').addEventListener('click', () => { selected.clear(); buildGrid(); updateSelBar(); $('playBtn').disabled = true; });
+$('selAllBtn').addEventListener('click', () => { filtered.forEach(u => { if (!selected.has(u)) selected.set(u, 0); }); renumberSelected(); buildGrid(); updateSelBar(); updatePlayBtn(); });
+$('deselBtn').addEventListener('click', () => { selected.clear(); buildGrid(); updateSelBar(); updatePlayBtn(); });
 $('cancelBtn').addEventListener('click', () => { selected.clear(); toggleSelectMode(); });
 
-// Move
+// Move — writes using full relative path under dest, then removes source by path
 $('moveExistBtn').addEventListener('click', async () => {
   if (!selected.size) return;
   if (!window.showDirectoryPicker) { downloadSelected(); return; }
@@ -1000,40 +1080,44 @@ $('moveExistBtn').addEventListener('click', async () => {
     let target = dest;
     if (sub?.trim()) target = await dest.getDirectoryHandle(sub.trim(), { create: true });
     let moved = 0, deleted = 0;
-    for (const [url] of selected) {
+    const failed = [];
+    const succeededUrls = [];
+    for (const url of [...selected.keys()]) {
       const meta = getMetaForURL(url);
-      if (!meta?.file) continue;
+      if (!meta?.file || !meta.path) continue;
       try {
-        await writeFileToDir(target, meta.name, meta.file);
+        await writeFileToPath(target, meta.path, meta.file);
         moved++;
-        if (sourceDirHandle) { try { await sourceDirHandle.removeEntry(meta.name); deleted++; } catch (e) {} }
-      } catch (e) { console.error(`Failed: ${meta.name}`, e); }
+        succeededUrls.push(url);
+        if (sourceDirHandle) {
+          try {
+            await removeAtPath(sourceDirHandle, meta.path);
+            deleted++;
+          } catch (e) {
+            console.error(`Failed to remove source: ${meta.path}`, e);
+            failed.push(`${meta.path} (copied, source kept)`);
+          }
+        }
+      } catch (e) {
+        console.error(`Failed move: ${meta.path}`, e);
+        failed.push(meta.path);
+      }
     }
-    for (const [url] of selected) {
-      const idx = allFiles.indexOf(url);
-      if (idx > -1) allFiles.splice(idx, 1);
-      const name = getNameForURL(url);
-      urlToName.delete(url);
-      fileMeta.delete(name);
-      URL.revokeObjectURL(url);
-    }
+    for (const url of succeededUrls) dropFileFromMemory(url);
     exitSelectMode(); render();
     const destName = sub?.trim() ? `${dest.name}/${sub.trim()}` : dest.name;
-    showToast(deleted ? `Moved ${moved} to ${destName}` : `Copied ${moved} to ${destName} (source not deleted)`, 'success');
+    if (failed.length) {
+      showToast(`Moved ${moved} to ${destName}; ${failed.length} issue(s): ${failed.slice(0, 2).join(', ')}${failed.length > 2 ? '…' : ''}`, 'error');
+    } else {
+      showToast(deleted ? `Moved ${moved} to ${destName}` : `Copied ${moved} to ${destName} (source not deleted)`, 'success');
+    }
   } catch (err) { if (err.name !== 'AbortError') showToast('Permission denied — use http:// not file://', 'error'); }
 });
 
 $('delBtn').addEventListener('click', () => {
   if (!selected.size) return;
   if (!confirm(`Remove ${selected.size} file${selected.size !== 1 ? 's' : ''} from view?`)) return;
-  for (const [url] of selected) {
-    const idx = allFiles.indexOf(url);
-    if (idx > -1) allFiles.splice(idx, 1);
-    const name = getNameForURL(url);
-    urlToName.delete(url);
-    fileMeta.delete(name);
-    URL.revokeObjectURL(url);
-  }
+  for (const url of [...selected.keys()]) dropFileFromMemory(url);
   exitSelectMode(); render();
   showToast('Removed from view', 'success');
 });
@@ -1041,20 +1125,26 @@ $('delBtn').addEventListener('click', () => {
 $('deleteBtn').addEventListener('click', async () => {
   if (!selected.size) return;
   if (!sourceDirHandle) { showToast('Cannot delete — folder was opened via drag-drop, not Open Folder button', 'error'); return; }
-  if (!confirm(`Permanently delete ${selected.size} file${selected.size !== 1 ? 's' : ''} from disk?\n\nThis cannot be undone.`)) return;
+  const paths = [...selected.keys()].map(u => getMetaForURL(u)?.path || getNameForURL(u)).filter(Boolean);
+  if (!confirm(`Permanently delete ${selected.size} file${selected.size !== 1 ? 's' : ''} from disk?\n\n${paths.slice(0, 5).join('\n')}${paths.length > 5 ? `\n…and ${paths.length - 5} more` : ''}\n\nThis cannot be undone.`)) return;
   let deleted = 0;
-  for (const [url] of selected) {
-    const name = getNameForURL(url);
+  const failed = [];
+  for (const url of [...selected.keys()]) {
+    const meta = getMetaForURL(url);
+    if (!meta) continue;
+    const path = meta.path || meta.name;
     try {
-      await sourceDirHandle.removeEntry(name);
+      await removeAtPath(sourceDirHandle, path);
       deleted++;
-      const idx = allFiles.indexOf(url);
-      if (idx > -1) allFiles.splice(idx, 1);
-      urlToName.delete(url); fileMeta.delete(name); URL.revokeObjectURL(url);
-    } catch (e) { console.error(`Failed to delete ${name}:`, e); }
+      dropFileFromMemory(url);
+    } catch (e) {
+      console.error(`Failed to delete ${path}:`, e);
+      failed.push(path);
+    }
   }
   exitSelectMode(); render();
-  showToast(`Deleted ${deleted} file${deleted !== 1 ? 's' : ''} from disk`, 'success');
+  if (failed.length) showToast(`Deleted ${deleted}; failed: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? '…' : ''}`, 'error');
+  else showToast(`Deleted ${deleted} file${deleted !== 1 ? 's' : ''} from disk`, 'success');
 });
 
 function downloadSelected() {
@@ -1082,16 +1172,36 @@ document.addEventListener('dragover', e => e.preventDefault());
 document.addEventListener('drop', e => {
   e.preventDefault(); dragC = 0; $('dropOverlay').classList.remove('visible'); $('dropZone').classList.remove('dragover');
   const items = e.dataTransfer.items;
-  if (!items) { addFiles(e.dataTransfer.files); return; }
+  if (!items) { addFiles([...e.dataTransfer.files]); return; }
   const allDropped = [], entries = [...items].map(i => i.webkitGetAsEntry?.()).filter(Boolean);
   let readErrors = 0;
-  function readEntry(entry, cb) {
-    if (entry.isFile) entry.file(f => { allDropped.push(f); cb(); }, () => { readErrors++; cb(); });
-    else if (entry.isDirectory) { const r = entry.createReader(); function readBatch() { r.readEntries(b => { if (!b.length) { cb(); return; } let p = b.length; b.forEach(e => readEntry(e, () => { if (--p === 0) readBatch(); })); }, () => { readErrors++; cb(); }); } readBatch(); }
-    else cb();
+  // Track relative path during recursive entry walk so nested names stay unique
+  function readEntry(entry, relPath, cb) {
+    const path = relPath ? `${relPath}/${entry.name}` : entry.name;
+    if (entry.isFile) {
+      entry.file(f => {
+        allDropped.push({ file: f, path: f.webkitRelativePath || path });
+        cb();
+      }, () => { readErrors++; cb(); });
+    } else if (entry.isDirectory) {
+      const r = entry.createReader();
+      function readBatch() {
+        r.readEntries(batch => {
+          if (!batch.length) { cb(); return; }
+          let p = batch.length;
+          batch.forEach(child => readEntry(child, path, () => { if (--p === 0) readBatch(); }));
+        }, () => { readErrors++; cb(); });
+      }
+      readBatch();
+    } else cb();
   }
   let p = entries.length; if (!p) return;
-  entries.forEach(e => readEntry(e, () => { if (--p === 0) { addFiles(allDropped); if (readErrors > 0) showToast(`Skipped ${readErrors} unreadable file${readErrors !== 1 ? 's' : ''}`, 'error'); } }));
+  entries.forEach(entry => readEntry(entry, '', () => {
+    if (--p === 0) {
+      addFiles(allDropped);
+      if (readErrors > 0) showToast(`Skipped ${readErrors} unreadable file${readErrors !== 1 ? 's' : ''}`, 'error');
+    }
+  }));
 });
 
 // ===== THEME =====
@@ -1192,7 +1302,8 @@ $('shortcutsOverlay').addEventListener('click', e => { if (e.target === $('short
 // ===== CLEANUP =====
 window.addEventListener('beforeunload', () => {
   for (const [, meta] of fileMeta) URL.revokeObjectURL(meta.url);
-  urlToName.clear();
+  urlToPath.clear();
+  fileMeta.clear();
 });
 
 render();

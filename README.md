@@ -9,7 +9,7 @@ A minimal media browser for images and videos. Single HTML file, no server, no u
 - **Video player** — seek, volume, loop modes, A-B repeat, playback speed, shuffle, PiP, fullscreen
 - **Type filter** — All / Images / Videos toggle
 - **Search & sort** — by name, date, size, type, duration, resolution
-- **Select mode** — multi-select with move to folder, remove, delete from disk
+- **Select mode** — multi-select with move to folder, remove, delete from disk (path-aware; works in nested folders)
 - **Dark mode** — toggle with localStorage persistence
 - **Keyboard navigation** — arrow keys, Enter/Space, shortcuts overlay (`?`)
 - **Drag & drop** — files or entire folders, recursive scan
