@@ -21,11 +21,11 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   :root {
     --bg: #fff; --bg2: #f5f5f5; --bg3: #eee; --text: #1a1a1a; --text2: #555; --text3: #6e6e6e;
-    --border: #ddd; --border2: #eee; --accent: #3b82f6; --danger: #d44;
+    --border: #ddd; --border2: #eee; --line: #e4e4e7; --accent: #3b82f6; --danger: #d44;
   }
   html.dark, body.dark {
     --bg: #0a0a0a; --bg2: #141414; --bg3: #1a1a1a; --text: #e0e0e0; --text2: #a0a0a0; --text3: #8a8a8a;
-    --border: #2a2a2a; --border2: #1a1a1a; --accent: #3b82f6; --danger: #d44;
+    --border: #2a2a2a; --border2: #1a1a1a; --line: #2e2e2e; --accent: #3b82f6; --danger: #d44;
   }
   body { font-family: 'IBM Plex Mono', ui-monospace, monospace; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.3s, color 0.3s; }
   /* Prose: landing sentences, empty-state help, toasts — chrome stays mono */
@@ -190,78 +190,163 @@
   body.has-sel-bar { padding-bottom: 52px; }
   .sel-count { color: var(--accent); font-weight: 500; }
 
-  /* Grid — Pinterest-style masonry via CSS columns (true aspect ratios, no forced crops) */
+  /* Grid — media wall: true ratios, generous gutters, no card shells */
   .grid {
     column-width: 220px;
-    column-gap: 4px;
-    padding: 4px;
+    column-gap: 10px;
+    padding: 12px 16px 24px;
   }
   .thumb {
     position: relative;
     overflow: hidden;
     cursor: pointer;
-    background: var(--bg2);
-    transition: transform 0.2s, box-shadow 0.2s;
+    background: transparent;
+    transition: filter 0.2s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     display: block;
     width: 100%;
-    margin: 0 0 4px;
+    margin: 0 0 10px;
     break-inside: avoid;
     page-break-inside: avoid;
     -webkit-column-break-inside: avoid;
   }
-  /* Images: natural height — height driven by the file itself */
+  /* Images: natural height — media edge is the tile edge */
   .thumb.image-thumb { min-height: 80px; }
   .thumb.image-thumb img {
     width: 100%;
     height: auto;
     display: block;
-    transition: opacity 0.2s;
+    transition: filter 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  /* Videos: card keeps aspect-ratio; media fills the box (no letterbox white) */
+  /* Videos: true aspect; media fills the tile */
   .thumb.video-thumb { max-height: none; }
   .thumb.video-thumb img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
-    transition: opacity 0.2s;
+    transition: filter 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     position: absolute;
     inset: 0;
   }
-  .thumb:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
-  .thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; transform: translateY(-2px); z-index: 2; }
+  /* Still wall: no lift/shadow — inset hairline + slight brighten */
+  .thumb:hover { filter: brightness(1.04); }
+  .thumb:hover::after,
+  .thumb:focus-visible::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 0 1px var(--line, var(--border));
+    pointer-events: none;
+    z-index: 2;
+  }
+  .thumb:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    z-index: 2;
+  }
   .btn:focus-visible, .tf-btn:focus-visible, .sort-dir:focus-visible, .sort-random:focus-visible, .drop-zone-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .drop-zone:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
   .header-sort select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .modal .nav:focus-visible, .modal .zoom-btn:focus-visible, .modal .close:focus-visible, .modal .slideshow-bar .ss-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Path: film-edge scrim, not a sticky white label */
   .thumb .name {
     position: absolute; bottom: 0; left: 0; right: 0;
-    padding: 4px 8px;
-    background: rgba(255,255,255,0.92);
-    font-size: 11px; color: #555;
+    padding: 20px 10px 8px;
+    background: linear-gradient(to top, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.2) 55%, transparent 100%);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.92);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     opacity: 0;
-    transition: opacity 0.15s;
+    transition: opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     pointer-events: none;
+    z-index: 1;
   }
-  .dark .thumb .name { background: rgba(0,0,0,0.85); color: #c0c0c0; }
-  /* Desktop: reveal path label on hover/focus; path still in title tooltip */
   .thumb:hover .name,
   .thumb:focus-visible .name { opacity: 1; }
   .thumb.selected .name { opacity: 1; }
-  /* Touch / no-hover: keep labels visible for glanceability */
   @media (hover: none) and (pointer: coarse) {
-    .thumb .name { opacity: 1; }
+    .thumb .name { opacity: 1; background: linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 100%); }
   }
-  .thumb .badge { position: absolute; top: 6px; right: 6px; min-width: 22px; height: 22px; background: var(--bg3); color: var(--text3); font-size: 12px; font-weight: 600; display: none; align-items: center; justify-content: center; transition: all 0.15s; padding: 0 4px; }
+
+  /* Selection: light-table marks */
+  .thumb .badge {
+    position: absolute; top: 8px; left: 8px;
+    min-width: 22px; height: 20px;
+    background: rgba(0,0,0,0.55); color: rgba(255,255,255,0.85);
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.04em;
+    display: none; align-items: center; justify-content: center;
+    transition: background 0.15s, color 0.15s, opacity 0.2s;
+    padding: 0 6px;
+    z-index: 2;
+    pointer-events: none;
+  }
   .sel-mode .thumb .badge { display: flex; }
-  .thumb.selected .badge { display: flex; background: var(--accent); color: #fff; }
-  .thumb.selected { outline: 2px solid var(--accent); outline-offset: -2px; }
-  .thumb .type-icon { position: absolute; top: 6px; left: 6px; padding: 2px 5px; background: rgba(0,0,0,0.55); color: #fff; font-size: 11px; border-radius: 2px; pointer-events: none; }
-  .thumb .dur { position: absolute; bottom: 28px; right: 6px; padding: 3px 7px; background: rgba(0,0,0,0.78); color: #fff; font-size: 11px; font-weight: 500; letter-spacing: 0.02em; z-index: 1; }
-  .thumb .play-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 40px; height: 40px; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
-  .thumb:hover .play-icon { opacity: 1; }
-  .thumb .play-icon::after { content: ''; width: 0; height: 0; border-left: 14px solid #fff; border-top: 8px solid transparent; border-bottom: 8px solid transparent; margin-left: 3px; }
+  .thumb.selected .badge { background: var(--accent); color: #fff; }
+  .thumb.selected {
+    outline: none;
+  }
+  .thumb.selected::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    box-shadow: inset 0 0 0 2px var(--accent);
+    pointer-events: none;
+    z-index: 3;
+  }
+  .thumb:hover.selected::after {
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+  /* Select mode: dim the wall, keep selected bright */
+  body.sel-mode .thumb:not(.selected) { opacity: 0.72; }
+  body.sel-mode .thumb.selected { opacity: 1; }
+
+  .thumb .type-icon {
+    position: absolute; top: 8px; right: 8px;
+    padding: 2px 6px;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 10px; letter-spacing: 0.04em;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .thumb .dur {
+    position: absolute; bottom: 8px; right: 8px;
+    padding: 3px 7px;
+    background: rgba(0,0,0,0.62);
+    color: #fff;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.02em;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .thumb.selected .dur { bottom: 8px; }
+  /* Video play mark: always present on video tiles */
+  .thumb .play-icon {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px; height: 40px;
+    background: rgba(0,0,0,0.45);
+    border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0.55;
+    transition: opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .thumb:hover .play-icon { opacity: 1; background: rgba(0,0,0,0.55); }
+  .thumb .play-icon::after {
+    content: '';
+    width: 0; height: 0;
+    border-left: 14px solid #fff;
+    border-top: 8px solid transparent;
+    border-bottom: 8px solid transparent;
+    margin-left: 3px;
+  }
 
   /* Modal (image viewer) */
   .modal { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.97); z-index: 100; align-items: center; justify-content: center; }
@@ -457,9 +542,65 @@
   .shortcut kbd { min-width: 48px; padding: 4px 8px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #aaa; text-align: center; }
   .shortcut span { font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 13px; color: #9a9a9a; }
   .shortcuts-section-title { font-size: 12px; color: #777; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+
+  /* Icons — 1.5 stroke system */
+  .icon {
+    width: 15px; height: 15px;
+    display: inline-block;
+    vertical-align: -0.12em;
+    flex-shrink: 0;
+    pointer-events: none;
+  }
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .ctrl .icon, .back .icon, .nav .icon { width: 18px; height: 18px; }
+  .zoom-btn .icon, .ss-btn .icon, .close .icon { width: 16px; height: 16px; }
+  .sort-dir .icon, .sort-random .icon { width: 14px; height: 14px; }
+  .btn .icon { width: 14px; height: 14px; }
+  .ctrl-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; margin-left: 2px; }
+  .shortcuts-close { display: inline-flex; align-items: center; justify-content: center; }
+
 </style>
 </head>
 <body>
+
+<!-- Icon sprite — 24 viewBox, 1.75 stroke -->
+<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false">
+  <defs>
+    <g id="i-chev-left" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 6.5L9 12l5.5 5.5"/></g>
+    <g id="i-chev-right" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 6.5L15 12l-5.5 5.5"/></g>
+    <g id="i-chev-up" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 14.5L12 9l5.5 5.5"/></g>
+    <g id="i-chev-down" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 9.5L12 15l5.5-5.5"/></g>
+    <g id="i-x" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></g>
+    <g id="i-play" fill="currentColor" stroke="none"><path d="M9 6.5v11l9-5.5-9-5.5z"/></g>
+    <g id="i-pause" fill="currentColor" stroke="none"><rect x="7" y="6" width="3.2" height="12" rx="0.4"/><rect x="13.8" y="6" width="3.2" height="12" rx="0.4"/></g>
+    <g id="i-skip-back" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M8 6.5v11l8-5.5-8-5.5z"/><path d="M6 6.5v11" stroke-linecap="round"/></g>
+    <g id="i-skip-fwd" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><path d="M16 6.5v11l-8-5.5 8-5.5z"/><path d="M18 6.5v11" stroke-linecap="round"/></g>
+    <g id="i-plus" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></g>
+    <g id="i-minus" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><path d="M6 12h12"/></g>
+    <g id="i-zoom-in" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4M11 8.5v5M8.5 11h5"/></g>
+    <g id="i-zoom-out" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4M8.5 11h5"/></g>
+    <g id="i-volume" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h3l4 3V7L7 10H4z"/><path d="M15 9.5a3.5 3.5 0 010 5M17.5 7a6 6 0 010 10"/></g>
+    <g id="i-volume-x" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v4h3l4 3V7L7 10H4z"/><path d="M16 10l4 4M20 10l-4 4"/></g>
+    <g id="i-maximize" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4H4v4M16 4h4v4M8 20H4v-4M16 20h4v-4"/></g>
+    <g id="i-shuffle" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h3.5l2 3M4 17h3.5l2-3M14 7h6M14 17h6M17 4l3 3-3 3M17 14l3 3-3 3"/></g>
+    <g id="i-repeat" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v3l3-3-3-3v3H5v6h2M17 17H7v-3l-3 3 3 3v-3h12v-6h-2"/></g>
+    <g id="i-repeat-1" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v3l3-3-3-3v3H5v6h2M17 17H7v-3l-3 3 3 3v-3h12v-6h-2"/><path d="M12 10.5v5l1.5-1"/></g>
+    <g id="i-repeat-off" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h10v3l3-3-3-3v3H5v6h2M17 17H7v-3l-3 3 3 3v-3h12v-6h-2"/><path d="M4 4l16 16" opacity="0.9"/></g>
+    <g id="i-random" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h4l8 8h4M4 16h4l2-2M14 10l2-2h4M18 5l3 3-3 3M18 13l3 3-3 3"/></g>
+    <g id="i-moon" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13.5A6.5 6.5 0 018.5 4 6.5 6.5 0 1018 13.5z"/></g>
+    <g id="i-sun" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"><circle cx="12" cy="12" r="3.5"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4l1.4-1.4M17 7l1.4-1.4"/></g>
+    <g id="i-slideshow" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="12" rx="1"/><path d="M8 21h8M12 17v4M10 10l4 2-4 2v-4z" fill="currentColor" stroke="none"/></g>
+    <g id="i-stop" fill="currentColor" stroke="none"><rect x="7" y="7" width="10" height="10" rx="1"/></g>
+    <g id="i-eye-off" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.5 10.6a2 2 0 002.8 2.8M7.2 7.3C5.2 8.5 3.5 10.7 3 12c0 0 3.5 6 9 6 1.5 0 2.9-.4 4.1-1M11 6.1c.3 0 .7-.1 1-.1 5.5 0 9 6 9 6a15 15 0 01-2.4 3.2"/></g>
+    <g id="i-trash" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h14M9 7V5h6v2M8 7l.8 12h6.4L16 7M10 11v5M14 11v5"/></g>
+    <g id="i-move" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6l2 2h10v10H3V7z"/><path d="M12 14h5M15 12l2 2-2 2"/></g>
+  </defs>
+</svg>
 
 <!-- LANDING -->
 <div class="landing" id="landing">
@@ -500,13 +641,13 @@
           <option value="duration">duration</option>
           <option value="resolution">resolution</option>
         </select>
-        <button class="sort-dir" id="sortDir" title="Toggle sort direction" aria-label="Toggle sort direction">↑</button>
-        <button class="sort-random" id="sortRandom" aria-label="Randomize order">random</button>
+        <button class="sort-dir icon-btn" id="sortDir" title="Toggle sort direction" aria-label="Toggle sort direction"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev-up"></use></svg></button>
+        <button class="sort-random icon-btn" id="sortRandom" aria-label="Randomize order"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-random"></use></svg><span class="ctrl-label">rand</span></button>
       </div>
       <div class="header-actions">
-        <button class="btn" id="themeBtn" aria-label="Toggle dark theme">dark</button>
-        <button class="btn" id="slideshowBtn" aria-label="Start image slideshow">Slideshow</button>
-        <button class="btn" id="playBtn" disabled aria-label="Play videos">Play</button>
+        <button class="btn icon-btn" id="themeBtn" aria-label="Toggle dark theme"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-moon"></use></svg><span id="themeBtnLabel">dark</span></button>
+        <button class="btn icon-btn" id="slideshowBtn" aria-label="Start image slideshow"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-slideshow"></use></svg><span>Slideshow</span></button>
+        <button class="btn icon-btn" id="playBtn" disabled aria-label="Play videos"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg><span>Play</span></button>
       </div>
     </div>
   </div>
@@ -514,10 +655,10 @@
     <span class="sel-count" id="selCount" aria-live="polite">0 selected</span>
     <button class="btn" id="selAllBtn" aria-label="Select all filtered files">All</button>
     <button class="btn" id="deselBtn" aria-label="Clear selection">None</button>
-    <button class="btn primary" id="moveExistBtn" aria-label="Move selected files to a folder">Move → Folder</button>
-    <button class="btn danger" id="delBtn" title="Hide from this view — files stay on disk" aria-label="Remove selected from view">Remove from view</button>
+    <button class="btn primary icon-btn" id="moveExistBtn" aria-label="Move selected files to a folder"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-move"></use></svg><span>Move → Folder</span></button>
+    <button class="btn danger icon-btn" id="delBtn" title="Hide from this view — files stay on disk" aria-label="Remove selected from view"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-eye-off"></use></svg><span>Remove from view</span></button>
     <span class="spacer"></span>
-    <button class="btn danger-solid" id="deleteBtn" title="Permanently delete from disk — cannot be undone" aria-label="Delete selected from disk permanently">Delete from disk…</button>
+    <button class="btn danger-solid icon-btn" id="deleteBtn" title="Permanently delete from disk — cannot be undone" aria-label="Delete selected from disk permanently"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trash"></use></svg><span>Delete from disk…</span></button>
     <button class="btn" id="cancelBtn" aria-label="Cancel select mode">Cancel</button>
   </div>
   <div class="grid active" id="grid" role="list" aria-label="Media grid"></div>
@@ -537,24 +678,24 @@
 
 <!-- IMAGE MODAL -->
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Image viewer">
-  <button class="close" id="modalClose" aria-label="Close image viewer">close ×</button>
+  <button class="close icon-btn" id="modalClose" aria-label="Close image viewer"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"></use></svg></button>
   <div class="slideshow-bar" id="ssBar" style="display:none" role="group" aria-label="Slideshow controls">
-    <button class="ss-btn" id="ssPrev" aria-label="Previous slide">‹</button>
-    <button class="ss-btn" id="ssPlayPause" aria-label="Pause slideshow">pause</button>
-    <button class="ss-btn" id="ssNext" aria-label="Next slide">›</button>
-    <button class="ss-btn" id="ssSlower" aria-label="Slower slideshow">−</button>
+    <button class="ss-btn icon-btn" id="ssPrev" aria-label="Previous slide"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev-left"></use></svg></button>
+    <button class="ss-btn icon-btn" id="ssPlayPause" aria-label="Pause slideshow"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pause"></use></svg></button>
+    <button class="ss-btn icon-btn" id="ssNext" aria-label="Next slide"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev-right"></use></svg></button>
+    <button class="ss-btn icon-btn" id="ssSlower" aria-label="Slower slideshow"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-minus"></use></svg></button>
     <span class="ss-speed" id="ssSpeed">3s</span>
-    <button class="ss-btn" id="ssFaster" aria-label="Faster slideshow">+</button>
-    <button class="ss-btn" id="ssStop" aria-label="Stop slideshow">stop</button>
+    <button class="ss-btn icon-btn" id="ssFaster" aria-label="Faster slideshow"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-plus"></use></svg></button>
+    <button class="ss-btn icon-btn" id="ssStop" aria-label="Stop slideshow"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-stop"></use></svg></button>
   </div>
-  <button class="nav prev" id="modalPrev" aria-label="Previous image">‹</button>
-  <button class="nav next" id="modalNext" aria-label="Next image">›</button>
+  <button class="nav prev icon-btn" id="modalPrev" aria-label="Previous image"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev-left"></use></svg></button>
+  <button class="nav next icon-btn" id="modalNext" aria-label="Next image"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev-right"></use></svg></button>
   <img id="modalImg" src="" alt="" onerror="this.style.display='none'; $('modalError').style.display='flex';">
   <div id="modalError" style="display:none; align-items:center; justify-content:center; color:var(--text3); font-size:13px;">failed to load</div>
   <div class="zoom-controls" role="group" aria-label="Zoom controls">
-    <button class="zoom-btn" id="zoomOut" aria-label="Zoom out">−</button>
+    <button class="zoom-btn icon-btn" id="zoomOut" aria-label="Zoom out"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-zoom-out"></use></svg></button>
     <div class="zoom-level" id="zoomLevel" aria-live="polite">100%</div>
-    <button class="zoom-btn" id="zoomIn" aria-label="Zoom in">+</button>
+    <button class="zoom-btn icon-btn" id="zoomIn" aria-label="Zoom in"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-zoom-in"></use></svg></button>
   </div>
   <div class="info" id="modalInfo"></div>
 </div>
@@ -562,7 +703,7 @@
 <!-- VIDEO PLAYER -->
 <div class="player-overlay" id="playerOverlay" role="dialog" aria-modal="true" aria-label="Video player">
   <div class="player-top">
-    <button class="back" id="backBtn" aria-label="Back to gallery">← back</button>
+    <button class="back icon-btn" id="backBtn" aria-label="Back to gallery"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev-left"></use></svg><span>back</span></button>
     <span class="info" id="playerInfo"></span>
   </div>
   <div class="player-video">
@@ -574,20 +715,20 @@
     <div class="seek-bar" id="seekBar" tabindex="0" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="seek-fill" id="seekFill"></div><div class="seek-tooltip" id="seekTooltip">0:00</div></div>
     <div class="player-controls">
       <div class="ctrl-left">
-        <button class="ctrl" id="prevBtn" aria-label="Previous video">|◄</button>
-        <button class="ctrl" id="playPauseBtn" aria-label="Play or pause">►</button>
-        <button class="ctrl" id="nextBtn" aria-label="Next video">►|</button>
-        <button class="ctrl active" id="loopBtn" aria-label="Loop mode">loop</button>
+        <button class="ctrl icon-btn" id="prevBtn" aria-label="Previous video"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-skip-back"></use></svg></button>
+        <button class="ctrl icon-btn" id="playPauseBtn" aria-label="Play or pause"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg></button>
+        <button class="ctrl icon-btn" id="nextBtn" aria-label="Next video"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-skip-fwd"></use></svg></button>
+        <button class="ctrl icon-btn active" id="loopBtn" aria-label="Loop mode: all"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-repeat"></use></svg><span class="ctrl-label" id="loopLabel">all</span></button>
         <button class="ctrl" id="abBtn" title="A-B repeat: [ and ]" aria-label="A-B repeat">A-B</button>
         <button class="ctrl" id="speedBtn" aria-label="Playback speed">1x</button>
-        <button class="ctrl" id="shuffleBtn" aria-label="Shuffle playlist">shuffle</button>
+        <button class="ctrl icon-btn" id="shuffleBtn" aria-label="Shuffle playlist"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shuffle"></use></svg></button>
         <button class="ctrl" id="pipBtn" aria-label="Picture in picture">PiP</button>
-        <button class="ctrl" id="fsBtn" aria-label="Fullscreen">⛶</button>
+        <button class="ctrl icon-btn" id="fsBtn" aria-label="Fullscreen"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-maximize"></use></svg></button>
       </div>
       <div class="ctrl-right">
         <span class="ctrl-time" id="timeDisplay">0:00 / 0:00</span>
         <div class="vol-wrap">
-          <button class="ctrl" id="muteBtn" aria-label="Mute or unmute">♪</button>
+          <button class="ctrl icon-btn" id="muteBtn" aria-label="Mute or unmute"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-volume"></use></svg></button>
           <div class="vol-slider" id="volSlider" tabindex="0" role="slider" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><div class="vol-fill" id="volFill"></div><div class="vol-tooltip" id="volTooltip">0%</div></div>
         </div>
       </div>
@@ -601,7 +742,7 @@
   <div class="shortcuts-panel">
     <div class="shortcuts-header">
       <span>Keyboard Shortcuts</span>
-      <button class="shortcuts-close" id="shortcutsClose">✕</button>
+      <button class="shortcuts-close icon-btn" id="shortcutsClose" aria-label="Close shortcuts"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-x"></use></svg></button>
     </div>
     <div class="shortcuts-section">
       <div class="shortcuts-section-title">Gallery</div>
@@ -666,6 +807,20 @@ const urlToPath = new Map(); // blob url → relative path
 let sourceDirHandle = null;
 
 const $ = id => document.getElementById(id);
+
+function iconHtml(id) {
+  return `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#${id}"></use></svg>`;
+}
+function setBtnIcon(btn, iconId, label) {
+  if (!btn) return;
+  btn.innerHTML = iconHtml(iconId) + (label != null && label !== '' ? `<span class="ctrl-label">${label}</span>` : '');
+}
+function ensureIconViewBox(root) {
+  (root || document).querySelectorAll('svg.icon').forEach(s => {
+    if (!s.getAttribute('viewBox')) s.setAttribute('viewBox', '0 0 24 24');
+  });
+}
+ensureIconViewBox(document);
 
 // Cached DOM refs for hot-path handlers
 const _playerVideo = $('playerVideo'), _seekFill = $('seekFill'), _timeDisplay = $('timeDisplay');
@@ -973,14 +1128,14 @@ function cardHTML(src, i) {
     const dur = meta?.duration ? `<div class="dur">${formatDur(meta.duration)}</div>` : '';
     extra = `<div class="play-icon"></div>${dur}`;
     return `<div class="thumb ${cls}${sel}" id="t-${i}" data-url="${src}" data-path="${pathAttr}" tabindex="0" role="button" aria-label="${alt}${sel ? ', selected' : ''}" title="${pathAttr}" style="aspect-ratio:${ar}" onclick="handleClick(event,${i})">
-      <div class="badge" aria-hidden="true">${num !== undefined ? num : '0'}</div>${thumb}${extra}
+      <div class="badge" aria-hidden="true">${num !== undefined ? padOrder(num) : '—'}</div>${thumb}${extra}
       <div class="name">${labelHtml}</div>
     </div>`;
   } else {
     // Images: no forced square — natural height drives masonry (Pinterest-style)
     thumb = `<img src="${src}" alt="${alt}" loading="lazy">`;
     return `<div class="thumb ${cls}${sel}" id="t-${i}" data-url="${src}" data-path="${pathAttr}" tabindex="0" role="button" aria-label="${alt}${sel ? ', selected' : ''}" title="${pathAttr}" onclick="handleClick(event,${i})">
-      <div class="badge" aria-hidden="true">${num !== undefined ? num : '0'}</div>${thumb}
+      <div class="badge" aria-hidden="true">${num !== undefined ? padOrder(num) : '—'}</div>${thumb}
       <div class="name">${labelHtml}</div>
     </div>`;
   }
@@ -1082,7 +1237,7 @@ function toggleSelection(url, index) {
     selected.delete(url);
     el.classList.remove('selected');
     const badge = el.querySelector('.badge');
-    if (badge) badge.textContent = '0';
+    if (badge) badge.textContent = '—';
   } else if (url) {
     if (!selected.has(url)) selected.set(url, 0);
     if (el) {
@@ -1112,6 +1267,8 @@ function selectRange(fromIdx, toIdx) {
   updatePlayBtn();
 }
 
+function padOrder(n) { return n > 0 ? String(n).padStart(2, '0') : '—'; }
+
 function renumberSelected() {
   let n = 0;
   for (const [url] of selected) {
@@ -1120,7 +1277,7 @@ function renumberSelected() {
     if (idx > -1) {
       const el = document.getElementById(`t-${idx}`);
       if (el) {
-        el.querySelector('.badge').textContent = n;
+        el.querySelector('.badge').textContent = padOrder(n);
         const name = getNameForURL(url);
         el.setAttribute('aria-label', `${name}, selected ${n}`);
       }
@@ -1290,14 +1447,26 @@ function startSlideshow() {
   }
   ssRunning = true;
   $('ssBar').style.display = '';
-  $('ssPlayPause').textContent = 'pause';
+  setBtnIcon($('ssPlayPause'), 'i-pause');
+  $('ssPlayPause').setAttribute('aria-label', 'Pause slideshow');
   $('ssSpeed').textContent = (ssSpeed / 1000) + 's';
   scheduleNext();
 }
 
 function stopSlideshow() { ssRunning = false; clearTimeout(ssTimer); $('ssBar').style.display = 'none'; }
 function scheduleNext() { clearTimeout(ssTimer); if (!ssRunning) return; ssTimer = setTimeout(() => { modalNav(1); scheduleNext(); }, ssSpeed); }
-function togglePlayPause() { if (ssRunning) { ssRunning = false; clearTimeout(ssTimer); $('ssPlayPause').textContent = 'play'; } else { ssRunning = true; $('ssPlayPause').textContent = 'pause'; scheduleNext(); } }
+function togglePlayPause() {
+  if (ssRunning) {
+    ssRunning = false; clearTimeout(ssTimer);
+    setBtnIcon($('ssPlayPause'), 'i-play');
+    $('ssPlayPause').setAttribute('aria-label', 'Play slideshow');
+  } else {
+    ssRunning = true;
+    setBtnIcon($('ssPlayPause'), 'i-pause');
+    $('ssPlayPause').setAttribute('aria-label', 'Pause slideshow');
+    scheduleNext();
+  }
+}
 function adjustSpeed(delta) { ssSpeed = Math.max(500, Math.min(10000, ssSpeed + delta)); $('ssSpeed').textContent = (ssSpeed / 1000) + 's'; if (ssRunning) scheduleNext(); }
 
 $('slideshowBtn').addEventListener('click', startSlideshow);
@@ -1346,7 +1515,7 @@ function stopPlayback() {
 
 function updatePPBtn() {
   const paused = $('playerVideo').paused;
-  $('playPauseBtn').textContent = paused ? '►' : '❚❚';
+  setBtnIcon($('playPauseBtn'), paused ? 'i-play' : 'i-pause');
   $('playPauseBtn').setAttribute('aria-label', paused ? 'Play' : 'Pause');
   $('playerOverlay').classList.toggle('playing', !paused);
   if (paused) { showControls(); clearTimeout(controlsTimer); } else { showControls(); }
@@ -1430,7 +1599,15 @@ function seekBy(delta) {
 }
 
 // Loop
-function updateLoopBtn() { const labels = ['loop off', 'loop all', 'loop 1']; $('loopBtn').textContent = labels[loopMode]; $('loopBtn').classList.toggle('active', loopMode > 0); }
+function updateLoopBtn() {
+  const icons = ['i-repeat-off', 'i-repeat', 'i-repeat-1'];
+  const labels = ['off', 'all', '1'];
+  const titles = ['Loop off', 'Loop all', 'Loop one'];
+  setBtnIcon($('loopBtn'), icons[loopMode] || 'i-repeat', labels[loopMode] || 'all');
+  $('loopBtn').classList.toggle('active', loopMode > 0);
+  $('loopBtn').setAttribute('aria-label', titles[loopMode] || 'Loop mode');
+  $('loopBtn').title = titles[loopMode] || 'Loop mode';
+}
 $('loopBtn').addEventListener('click', () => { loopMode = (loopMode + 1) % 3; updateLoopBtn(); });
 updateLoopBtn();
 
@@ -1496,9 +1673,10 @@ $('muteBtn').addEventListener('click', () => { $('playerVideo').muted = !$('play
 function updateVolFill() {
   const vol = _playerVideo.muted ? 0 : _playerVideo.volume;
   _volFill.style.width = (vol * 100) + '%';
-  _muteBtn.textContent = vol === 0 ? '♪̸' : vol < 0.5 ? '♪' : '♫';
-  _muteBtn.classList.toggle('active', _playerVideo.muted || vol === 0);
-  _muteBtn.setAttribute('aria-label', _playerVideo.muted || vol === 0 ? 'Unmute' : 'Mute');
+  const silent = _playerVideo.muted || vol === 0;
+  setBtnIcon(_muteBtn, silent ? 'i-volume-x' : 'i-volume');
+  _muteBtn.classList.toggle('active', silent);
+  _muteBtn.setAttribute('aria-label', silent ? 'Unmute' : 'Mute');
   const volSlider = $('volSlider');
   if (volSlider) {
     volSlider.setAttribute('aria-valuenow', String(Math.round(vol * 100)));
@@ -1679,7 +1857,7 @@ $('search').addEventListener('input', () => { clearTimeout(searchTimer); searchT
 // ===== SORT =====
 $('sortRandom').addEventListener('click', () => { for (let i = allFiles.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [allFiles[i], allFiles[j]] = [allFiles[j], allFiles[i]]; } sortField = 'none'; render(); });
 $('sortField').addEventListener('change', e => { sortField = e.target.value; render(); });
-$('sortDir').addEventListener('click', () => { if (sortField === 'none') sortField = 'name'; sortAsc = !sortAsc; $('sortDir').textContent = sortAsc ? '↑' : '↓'; render(); });
+$('sortDir').addEventListener('click', () => { if (sortField === 'none') sortField = 'name'; sortAsc = !sortAsc; setBtnIcon($('sortDir'), sortAsc ? 'i-chev-up' : 'i-chev-down'); $('sortDir').setAttribute('aria-label', sortAsc ? 'Sort ascending' : 'Sort descending'); render(); });
 
 // ===== DRAG & DROP =====
 let dragC = 0;
@@ -1725,7 +1903,13 @@ document.addEventListener('drop', e => {
 function applyTheme(dark, persist) {
   document.documentElement.classList.toggle('dark', dark);
   document.body.classList.toggle('dark', dark);
-  $('themeBtn').textContent = dark ? 'light' : 'dark';
+  const label = $('themeBtnLabel');
+  if (label) label.textContent = dark ? 'light' : 'dark';
+  const btn = $('themeBtn');
+  if (btn) {
+    const use = btn.querySelector('use');
+    if (use) use.setAttribute('href', dark ? '#i-sun' : '#i-moon');
+  }
   if (persist) {
     try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
   }
