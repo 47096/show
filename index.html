@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>show</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' stroke='%231a1a1a' stroke-width='2' fill='none'/%3E%3Ctext x='16' y='23' text-anchor='middle' font-family='sans-serif' font-size='20' font-weight='700' fill='%231a1a1a'%3ES%3C/text%3E%3C/svg%3E">
+<script>
+// Apply theme before first paint: saved override wins, else OS preference
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem('theme'); } catch (e) {}
+  var prefersDark = false;
+  try { prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) {}
+  var dark = saved === 'dark' || (saved !== 'light' && prefersDark);
+  if (dark) document.documentElement.classList.add('dark');
+})();
+</script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -12,7 +23,7 @@
     --bg: #fff; --bg2: #f5f5f5; --bg3: #eee; --text: #1a1a1a; --text2: #666; --text3: #999;
     --border: #ddd; --border2: #eee; --accent: #3b82f6; --danger: #d44;
   }
-  .dark {
+  html.dark, body.dark {
     --bg: #0a0a0a; --bg2: #141414; --bg3: #1a1a1a; --text: #e0e0e0; --text2: #888; --text3: #555;
     --border: #2a2a2a; --border2: #1a1a1a; --accent: #3b82f6; --danger: #d44;
   }
@@ -29,6 +40,8 @@
   .drop-zone-hint { font-size: 12px; color: var(--text3); margin-top: 12px; }
   .drop-zone-hint .cursor { animation: blink 1s step-end infinite; }
   @keyframes blink { 50% { opacity: 0; } }
+  .landing-tagline { font-size: 12px; color: var(--text3); letter-spacing: 0.5px; text-align: center; max-width: 420px; line-height: 1.5; }
+  .landing-note { font-size: 11px; color: var(--text3); text-align: center; max-width: 420px; line-height: 1.5; opacity: 0.85; }
   .drop-zone-formats { font-size: 11px; color: var(--border); margin-top: 16px; letter-spacing: 1px; }
 
   /* ===== GALLERY VIEW ===== */
@@ -55,8 +68,12 @@
   .btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
   .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   .btn.primary:hover { opacity: 0.85; }
-  .btn.danger { border-color: var(--danger); color: var(--danger); }
-  .btn.danger:hover { background: var(--danger); color: #fff; }
+  .btn.danger { border-color: var(--border); color: var(--text2); }
+  .btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+  /* Only irreversible disk delete is filled danger */
+  .btn.danger-solid { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .btn.danger-solid:hover { opacity: 0.9; background: var(--danger); color: #fff; }
+  .sel-bar .spacer { flex: 1; min-width: 8px; }
 
   /* Type filter */
   .type-filter { display: flex; gap: 0; margin-left: 4px; }
@@ -115,8 +132,25 @@
   .drop-zone:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
   .header-sort select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .modal .nav:focus-visible, .modal .zoom-btn:focus-visible, .modal .close:focus-visible, .modal .slideshow-bar .ss-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .thumb .name { position: absolute; bottom: 0; left: 0; right: 0; padding: 3px 6px; background: rgba(255,255,255,0.92); font-size: 10px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .thumb .name {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 3px 6px;
+    background: rgba(255,255,255,0.92);
+    font-size: 10px; color: #666;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    opacity: 0;
+    transition: opacity 0.15s;
+    pointer-events: none;
+  }
   .dark .thumb .name { background: rgba(0,0,0,0.85); color: #aaa; }
+  /* Desktop: reveal path label on hover/focus; path still in title tooltip */
+  .thumb:hover .name,
+  .thumb:focus-visible .name { opacity: 1; }
+  .thumb.selected .name { opacity: 1; }
+  /* Touch / no-hover: keep labels visible for glanceability */
+  @media (hover: none) and (pointer: coarse) {
+    .thumb .name { opacity: 1; }
+  }
   .thumb .badge { position: absolute; top: 6px; right: 6px; min-width: 22px; height: 22px; background: var(--bg3); color: var(--text3); font-size: 11px; font-weight: 600; display: none; align-items: center; justify-content: center; transition: all 0.15s; padding: 0 4px; }
   .sel-mode .thumb .badge { display: flex; }
   .thumb.selected .badge { display: flex; background: var(--accent); color: #fff; }
@@ -131,7 +165,17 @@
   .modal { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.97); z-index: 100; align-items: center; justify-content: center; }
   .dark .modal { background: rgba(10,10,10,0.97); }
   .modal.open { display: flex; }
-  .modal img { max-width: 92vw; max-height: 88vh; object-fit: contain; }
+  .modal img {
+    max-width: 92vw;
+    max-height: 88vh;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+    cursor: zoom-in;
+    touch-action: none;
+  }
+  .modal.zoomed img { cursor: grab; }
+  .modal.zoomed.panning img { cursor: grabbing; }
   .modal .close { position: absolute; top: 16px; right: 20px; font-size: 14px; color: var(--text); cursor: pointer; background: none; border: 1px solid var(--border); padding: 4px 10px; font-family: 'IBM Plex Mono', monospace; }
   .modal .close:hover { border-color: var(--text); }
   .modal .info { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--text3); letter-spacing: 1px; max-width: 80vw; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -232,7 +276,12 @@
   .dark .toast { background: #e0e0e0; color: #1a1a1a; }
   body.has-sel-bar .toast { bottom: 68px; }
 
-  .empty-msg { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 13px; }
+  .empty-msg { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 13px; display: none; }
+  .empty-msg.visible { display: block; }
+  .empty-msg .empty-title { color: var(--text2); font-size: 14px; margin-bottom: 8px; }
+  .empty-msg .empty-detail { font-size: 12px; line-height: 1.6; margin-bottom: 16px; }
+  .empty-msg .empty-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .empty-msg .empty-query { color: var(--accent); }
   .loading-msg { text-align: center; padding: 60px 20px; color: var(--text3); font-size: 13px; display: none; }
   .loading-msg.visible { display: block; }
 
@@ -260,28 +309,31 @@
 
 <!-- LANDING -->
 <div class="landing" id="landing">
+  <div class="landing-tagline">local media browser — images &amp; videos stay on your machine</div>
   <div class="drop-zone" id="dropZone">
     <div class="drop-zone-title">> open_folder</div>
-    <button class="drop-zone-btn" id="openBtn">Open Folder</button>
+    <button class="drop-zone-btn" id="openBtn" aria-label="Open folder">Open Folder</button>
     <input type="file" id="folderInput" webkitdirectory multiple style="display:none">
     <div class="drop-zone-hint">/ or drop files here<span class="cursor">_</span></div>
+    <div class="drop-zone-formats">jpg png gif webp avif · mp4 webm mov</div>
   </div>
+  <div class="landing-note">Folder open/write needs Chrome or Edge over http(s). <span id="fsApiNote"></span> Drag-drop works everywhere for browsing.</div>
 </div>
 
 <!-- GALLERY -->
 <div class="gallery-view" id="galleryView">
   <div class="header">
-    <button class="btn" id="openFolderHeader">Open Folder</button>
-    <div class="header-search"><input type="text" id="search" placeholder="search..."></div>
-    <div class="header-count" id="count">0 files</div>
-    <div class="type-filter" id="typeFilter">
-      <button class="tf-btn active" data-filter="all">All</button>
-      <button class="tf-btn" data-filter="image">Images</button>
-      <button class="tf-btn" data-filter="video">Videos</button>
+    <button class="btn" id="openFolderHeader" aria-label="Open folder">Open Folder</button>
+    <div class="header-search"><input type="text" id="search" placeholder="search..." aria-label="Search files by path or name"></div>
+    <div class="header-count" id="count" aria-live="polite" aria-atomic="true">0 files</div>
+    <div class="type-filter" id="typeFilter" role="group" aria-label="Filter by media type">
+      <button class="tf-btn active" data-filter="all" aria-pressed="true">All</button>
+      <button class="tf-btn" data-filter="image" aria-pressed="false">Images</button>
+      <button class="tf-btn" data-filter="video" aria-pressed="false">Videos</button>
     </div>
     <div class="header-sort">
-      <span class="sort-label">sort:</span>
-      <select id="sortField">
+      <label class="sort-label" for="sortField">sort:</label>
+      <select id="sortField" aria-label="Sort field">
         <option value="name">name</option>
         <option value="date">date</option>
         <option value="size">size</option>
@@ -289,29 +341,34 @@
         <option value="duration">duration</option>
         <option value="resolution">resolution</option>
       </select>
-      <button class="sort-dir" id="sortDir" title="Toggle sort direction">↑</button>
-      <button class="sort-random" id="sortRandom">random</button>
+      <button class="sort-dir" id="sortDir" title="Toggle sort direction" aria-label="Toggle sort direction">↑</button>
+      <button class="sort-random" id="sortRandom" aria-label="Randomize order">random</button>
     </div>
     <div class="header-actions">
-      <button class="btn" id="themeBtn">dark</button>
-      <button class="btn" id="selectBtn">Select</button>
-      <button class="btn" id="slideshowBtn">Slideshow</button>
-      <button class="btn" id="playBtn" disabled>Play</button>
+      <button class="btn" id="themeBtn" aria-label="Toggle dark theme">dark</button>
+      <button class="btn" id="selectBtn" aria-label="Toggle select mode" aria-pressed="false">Select</button>
+      <button class="btn" id="slideshowBtn" aria-label="Start image slideshow">Slideshow</button>
+      <button class="btn" id="playBtn" disabled aria-label="Play videos">Play</button>
     </div>
   </div>
-  <div class="sel-bar" id="selBar">
-    <span class="sel-count" id="selCount">0 selected</span>
-    <button class="btn" id="selAllBtn">All</button>
-    <button class="btn" id="deselBtn">None</button>
-    <button class="btn primary" id="moveExistBtn">Move → Folder</button>
-    <button class="btn danger" id="delBtn">Remove</button>
-    <button class="btn danger" id="deleteBtn">Delete from disk</button>
-    <button class="btn" id="cancelBtn">Cancel</button>
+  <div class="sel-bar" id="selBar" role="region" aria-label="Selection actions">
+    <span class="sel-count" id="selCount" aria-live="polite">0 selected</span>
+    <button class="btn" id="selAllBtn" aria-label="Select all filtered files">All</button>
+    <button class="btn" id="deselBtn" aria-label="Clear selection">None</button>
+    <button class="btn primary" id="moveExistBtn" aria-label="Move selected files to a folder">Move → Folder</button>
+    <button class="btn danger" id="delBtn" title="Hide from this view — files stay on disk" aria-label="Remove selected from view">Remove from view</button>
+    <span class="spacer"></span>
+    <button class="btn danger-solid" id="deleteBtn" title="Permanently delete from disk — cannot be undone" aria-label="Delete selected from disk permanently">Delete from disk…</button>
+    <button class="btn" id="cancelBtn" aria-label="Cancel select mode">Cancel</button>
   </div>
-  <div class="grid active" id="grid"></div>
-  <div id="scrollSentinel" style="height:1px"></div>
-  <div class="loading-msg" id="loadingMsg">loading...</div>
-  <div class="empty-msg" id="emptyMsg" style="display:none">no files found</div>
+  <div class="grid active" id="grid" role="list" aria-label="Media grid"></div>
+  <div id="scrollSentinel" style="height:1px" aria-hidden="true"></div>
+  <div class="loading-msg" id="loadingMsg" aria-live="polite">loading...</div>
+  <div class="empty-msg" id="emptyMsg" style="display:none">
+    <div class="empty-title" id="emptyTitle">no files found</div>
+    <div class="empty-detail" id="emptyDetail"></div>
+    <div class="empty-actions" id="emptyActions"></div>
+  </div>
 </div>
 
 <div class="drop-overlay" id="dropOverlay">
@@ -320,66 +377,66 @@
 </div>
 
 <!-- IMAGE MODAL -->
-<div class="modal" id="modal">
-  <button class="close" id="modalClose">close ×</button>
-  <div class="slideshow-bar" id="ssBar" style="display:none">
-    <button class="ss-btn" id="ssPrev">‹</button>
-    <button class="ss-btn" id="ssPlayPause">pause</button>
-    <button class="ss-btn" id="ssNext">›</button>
-    <button class="ss-btn" id="ssSlower">−</button>
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-label="Image viewer">
+  <button class="close" id="modalClose" aria-label="Close image viewer">close ×</button>
+  <div class="slideshow-bar" id="ssBar" style="display:none" role="group" aria-label="Slideshow controls">
+    <button class="ss-btn" id="ssPrev" aria-label="Previous slide">‹</button>
+    <button class="ss-btn" id="ssPlayPause" aria-label="Pause slideshow">pause</button>
+    <button class="ss-btn" id="ssNext" aria-label="Next slide">›</button>
+    <button class="ss-btn" id="ssSlower" aria-label="Slower slideshow">−</button>
     <span class="ss-speed" id="ssSpeed">3s</span>
-    <button class="ss-btn" id="ssFaster">+</button>
-    <button class="ss-btn" id="ssStop">stop</button>
+    <button class="ss-btn" id="ssFaster" aria-label="Faster slideshow">+</button>
+    <button class="ss-btn" id="ssStop" aria-label="Stop slideshow">stop</button>
   </div>
-  <button class="nav prev" id="modalPrev">‹</button>
-  <button class="nav next" id="modalNext">›</button>
+  <button class="nav prev" id="modalPrev" aria-label="Previous image">‹</button>
+  <button class="nav next" id="modalNext" aria-label="Next image">›</button>
   <img id="modalImg" src="" alt="" onerror="this.style.display='none'; $('modalError').style.display='flex';">
   <div id="modalError" style="display:none; align-items:center; justify-content:center; color:var(--text3); font-size:13px;">failed to load</div>
-  <div class="zoom-controls">
-    <button class="zoom-btn" id="zoomOut">−</button>
-    <div class="zoom-level" id="zoomLevel">100%</div>
-    <button class="zoom-btn" id="zoomIn">+</button>
+  <div class="zoom-controls" role="group" aria-label="Zoom controls">
+    <button class="zoom-btn" id="zoomOut" aria-label="Zoom out">−</button>
+    <div class="zoom-level" id="zoomLevel" aria-live="polite">100%</div>
+    <button class="zoom-btn" id="zoomIn" aria-label="Zoom in">+</button>
   </div>
   <div class="info" id="modalInfo"></div>
 </div>
 
 <!-- VIDEO PLAYER -->
-<div class="player-overlay" id="playerOverlay">
+<div class="player-overlay" id="playerOverlay" role="dialog" aria-modal="true" aria-label="Video player">
   <div class="player-top">
-    <button class="back" id="backBtn">← back</button>
+    <button class="back" id="backBtn" aria-label="Back to gallery">← back</button>
     <span class="info" id="playerInfo"></span>
   </div>
   <div class="player-video">
-    <video id="playerVideo" playsinline></video>
-    <div class="center-play" id="centerPlayBtn"></div>
-    <div class="spinner" id="spinner"></div>
+    <video id="playerVideo" playsinline aria-label="Video"></video>
+    <div class="center-play" id="centerPlayBtn" role="button" tabindex="0" aria-label="Play video"></div>
+    <div class="spinner" id="spinner" aria-hidden="true"></div>
   </div>
   <div class="player-bottom">
-    <div class="seek-bar" id="seekBar" tabindex="0"><div class="seek-fill" id="seekFill"></div><div class="seek-tooltip" id="seekTooltip">0:00</div></div>
+    <div class="seek-bar" id="seekBar" tabindex="0" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="seek-fill" id="seekFill"></div><div class="seek-tooltip" id="seekTooltip">0:00</div></div>
     <div class="player-controls">
       <div class="ctrl-left">
-        <button class="ctrl" id="prevBtn">|◄</button>
-        <button class="ctrl" id="playPauseBtn">►</button>
-        <button class="ctrl" id="nextBtn">►|</button>
-        <button class="ctrl active" id="loopBtn">loop</button>
-        <button class="ctrl" id="abBtn" title="A-B repeat: [ and ]">A-B</button>
-        <button class="ctrl" id="speedBtn">1x</button>
-        <button class="ctrl" id="shuffleBtn">shuffle</button>
-        <button class="ctrl" id="pipBtn">PiP</button>
-        <button class="ctrl" id="fsBtn">⛶</button>
+        <button class="ctrl" id="prevBtn" aria-label="Previous video">|◄</button>
+        <button class="ctrl" id="playPauseBtn" aria-label="Play or pause">►</button>
+        <button class="ctrl" id="nextBtn" aria-label="Next video">►|</button>
+        <button class="ctrl active" id="loopBtn" aria-label="Loop mode">loop</button>
+        <button class="ctrl" id="abBtn" title="A-B repeat: [ and ]" aria-label="A-B repeat">A-B</button>
+        <button class="ctrl" id="speedBtn" aria-label="Playback speed">1x</button>
+        <button class="ctrl" id="shuffleBtn" aria-label="Shuffle playlist">shuffle</button>
+        <button class="ctrl" id="pipBtn" aria-label="Picture in picture">PiP</button>
+        <button class="ctrl" id="fsBtn" aria-label="Fullscreen">⛶</button>
       </div>
       <div class="ctrl-right">
         <span class="ctrl-time" id="timeDisplay">0:00 / 0:00</span>
         <div class="vol-wrap">
-          <button class="ctrl" id="muteBtn">♪</button>
-          <div class="vol-slider" id="volSlider" tabindex="0"><div class="vol-fill" id="volFill"></div><div class="vol-tooltip" id="volTooltip">0%</div></div>
+          <button class="ctrl" id="muteBtn" aria-label="Mute or unmute">♪</button>
+          <div class="vol-slider" id="volSlider" tabindex="0" role="slider" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100"><div class="vol-fill" id="volFill"></div><div class="vol-tooltip" id="volTooltip">0%</div></div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <div class="shortcuts-overlay" id="shortcutsOverlay">
   <div class="shortcuts-panel">
@@ -392,8 +449,10 @@
       <div class="shortcuts-grid">
         <div class="shortcut"><kbd>S</kbd><span>Select mode</span></div>
         <div class="shortcut"><kbd>F</kbd><span>Open folder</span></div>
+        <div class="shortcut"><kbd>Shift+click</kbd><span>Select range from last click</span></div>
+        <div class="shortcut"><kbd>⌘/Ctrl+click</kbd><span>Toggle one card</span></div>
         <div class="shortcut"><kbd>Arrow keys</kbd><span>Navigate cards</span></div>
-        <div class="shortcut"><kbd>Enter</kbd><span>Open card</span></div>
+        <div class="shortcut"><kbd>Enter</kbd><span>Open / toggle card</span></div>
         <div class="shortcut"><kbd>Esc</kbd><span>Exit select / clear search</span></div>
         <div class="shortcut"><kbd>?</kbd><span>Show shortcuts</span></div>
       </div>
@@ -405,6 +464,9 @@
         <div class="shortcut"><kbd>→</kbd><span>Next image</span></div>
         <div class="shortcut"><kbd>↑</kbd><span>Zoom in</span></div>
         <div class="shortcut"><kbd>↓</kbd><span>Zoom out</span></div>
+        <div class="shortcut"><kbd>0</kbd><span>Reset zoom & pan</span></div>
+        <div class="shortcut"><kbd>drag</kbd><span>Pan when zoomed</span></div>
+        <div class="shortcut"><kbd>dbl-click</kbd><span>100% ↔ 200%</span></div>
         <div class="shortcut"><kbd>Esc</kbd><span>Close viewer</span></div>
       </div>
     </div>
@@ -412,8 +474,12 @@
       <div class="shortcuts-section-title">Video Player</div>
       <div class="shortcuts-grid">
         <div class="shortcut"><kbd>Space</kbd><span>Play / Pause</span></div>
-        <div class="shortcut"><kbd>←</kbd><span>Previous video</span></div>
-        <div class="shortcut"><kbd>→</kbd><span>Next video</span></div>
+        <div class="shortcut"><kbd>←</kbd><span>Seek −5s</span></div>
+        <div class="shortcut"><kbd>→</kbd><span>Seek +5s</span></div>
+        <div class="shortcut"><kbd>Shift+←</kbd><span>Previous video</span></div>
+        <div class="shortcut"><kbd>Shift+→</kbd><span>Next video</span></div>
+        <div class="shortcut"><kbd>Home</kbd><span>Jump to start</span></div>
+        <div class="shortcut"><kbd>End</kbd><span>Jump to end</span></div>
         <div class="shortcut"><kbd>F</kbd><span>Fullscreen</span></div>
         <div class="shortcut"><kbd>M</kbd><span>Mute</span></div>
         <div class="shortcut"><kbd>[</kbd><span>Set A-B start</span></div>
@@ -432,6 +498,7 @@ const VIDEO_EXT = /\.(mp4|webm|ogg|mov|mkv|avi|m4v|flv|wmv|m2ts|ts|3gp)$/i;
 
 // ===== STATE =====
 let allFiles = [], filtered = [], currentModalUrl = null, selectMode = false;
+let selectAnchorUrl = null; // last plain-click / cmd-click card; shift+click ranges from here
 let sortField = 'name', sortAsc = true, activeFilter = 'all'; // all | image | video
 const selected = new Map(); // url → order number
 // path (relative to opened root, e.g. "sub/photo.jpg") → meta; never key by basename alone
@@ -660,12 +727,55 @@ function render() {
   $('landing').classList.toggle('hidden', hasFiles);
   $('galleryView').classList.toggle('visible', hasFiles);
   $('count').textContent = `${filtered.length} file${filtered.length !== 1 ? 's' : ''}`;
-  $('emptyMsg').style.display = filtered.length ? 'none' : '';
+  updateEmptyState(hasFiles, q, filtered.length);
   updatePlayBtn();
   $('slideshowBtn').disabled = !filtered.some(u => isImage(u));
 
   buildGrid();
   updateSelBar();
+}
+
+function updateEmptyState(hasFiles, query, filteredCount) {
+  const el = $('emptyMsg');
+  const title = $('emptyTitle');
+  const detail = $('emptyDetail');
+  const actions = $('emptyActions');
+  const show = hasFiles && filteredCount === 0;
+  el.classList.toggle('visible', show);
+  el.style.display = show ? '' : 'none';
+  if (!show) { actions.innerHTML = ''; return; }
+
+  if (query) {
+    title.innerHTML = `no matches for <span class="empty-query">${escapeHtml(query)}</span>`;
+    detail.textContent = 'Search covers folder path + filename. Clear it to see everything again.';
+    actions.innerHTML = `<button class="btn" id="clearSearchBtn">Clear search</button>`;
+  } else if (activeFilter !== 'all') {
+    title.textContent = `no ${activeFilter} files`;
+    detail.textContent = 'This folder loaded, but nothing matched the type filter.';
+    actions.innerHTML = `
+      <button class="btn" data-empty-filter="all">Show all</button>
+      <button class="btn" id="emptyOpenFolder">Open another folder</button>`;
+  } else {
+    title.textContent = 'no media in this folder';
+    detail.innerHTML = 'Supported: JPG, PNG, GIF, WebP, BMP, SVG, AVIF, TIFF · MP4, WebM, OGG, MOV, MKV, AVI, M4V (browser-dependent).';
+    actions.innerHTML = `<button class="btn" id="emptyOpenFolder">Open another folder</button>`;
+  }
+
+  const clearBtn = $('clearSearchBtn');
+  if (clearBtn) clearBtn.addEventListener('click', () => { $('search').value = ''; render(); });
+  const openBtn = $('emptyOpenFolder');
+  if (openBtn) openBtn.addEventListener('click', openFolder);
+  actions.querySelectorAll('[data-empty-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeFilter = btn.dataset.emptyFilter;
+      $('typeFilter').querySelectorAll('.tf-btn').forEach(b => {
+        const on = b.dataset.filter === activeFilter;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      render();
+    });
+  });
 }
 
 // ===== GRID =====
@@ -694,15 +804,15 @@ function cardHTML(src, i) {
       : `<img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect fill='%23f0f0f0' width='320' height='180'/%3E%3Ctext x='160' y='95' text-anchor='middle' fill='%23ccc' font-size='14' font-family='monospace'%3Eloading...%3C/text%3E%3C/svg%3E" alt="${alt}">`;
     const dur = meta?.duration ? `<div class="dur">${formatDur(meta.duration)}</div>` : '';
     extra = `<div class="play-icon"></div>${dur}`;
-    return `<div class="thumb ${cls}${sel}" id="t-${i}" data-url="${src}" data-path="${pathAttr}" tabindex="0" title="${pathAttr}" style="aspect-ratio:${ar}" onclick="handleClick(event,${i})">
-      <div class="badge">${num !== undefined ? num : '0'}</div>${thumb}${extra}
+    return `<div class="thumb ${cls}${sel}" id="t-${i}" data-url="${src}" data-path="${pathAttr}" tabindex="0" role="button" aria-label="${alt}${sel ? ', selected' : ''}" title="${pathAttr}" style="aspect-ratio:${ar}" onclick="handleClick(event,${i})">
+      <div class="badge" aria-hidden="true">${num !== undefined ? num : '0'}</div>${thumb}${extra}
       <div class="name">${labelHtml}</div>
     </div>`;
   } else {
     // Images: no forced square — natural height drives masonry (Pinterest-style)
     thumb = `<img src="${src}" alt="${alt}" loading="lazy">`;
-    return `<div class="thumb ${cls}${sel}" id="t-${i}" data-url="${src}" data-path="${pathAttr}" tabindex="0" title="${pathAttr}" onclick="handleClick(event,${i})">
-      <div class="badge">${num !== undefined ? num : '0'}</div>${thumb}
+    return `<div class="thumb ${cls}${sel}" id="t-${i}" data-url="${src}" data-path="${pathAttr}" tabindex="0" role="button" aria-label="${alt}${sel ? ', selected' : ''}" title="${pathAttr}" onclick="handleClick(event,${i})">
+      <div class="badge" aria-hidden="true">${num !== undefined ? num : '0'}</div>${thumb}
       <div class="name">${labelHtml}</div>
     </div>`;
   }
@@ -756,7 +866,18 @@ _gridObserver.observe(_sentinel);
 function handleClick(e, i) {
   if (selectMode) {
     e.stopPropagation();
-    toggleSelection(filtered[i], i);
+    const url = filtered[i];
+    if (url == null) return;
+    // Shift+click: select contiguous range from anchor → this card (additive)
+    if (e.shiftKey && selectAnchorUrl) {
+      const anchorIdx = filtered.indexOf(selectAnchorUrl);
+      if (anchorIdx > -1) selectRange(anchorIdx, i);
+      else { toggleSelection(url, i); selectAnchorUrl = url; }
+      return;
+    }
+    // Cmd/Ctrl+click or plain click: toggle one card and move the anchor
+    toggleSelection(url, i);
+    selectAnchorUrl = url;
   } else {
     if (isVideo(filtered[i])) startPlayback(filtered[i]);
     else openModal(filtered[i]);
@@ -766,10 +887,35 @@ function handleClick(e, i) {
 // ===== SELECTION =====
 function toggleSelection(url, index) {
   const el = document.getElementById(`t-${index}`);
-  if (!el) return;
-  const badge = el.querySelector('.badge');
-  if (selected.has(url)) { selected.delete(url); el.classList.remove('selected'); badge.textContent = '0'; }
-  else { selected.set(url, 0); el.classList.add('selected'); }
+  if (el && selected.has(url)) {
+    selected.delete(url);
+    el.classList.remove('selected');
+    const badge = el.querySelector('.badge');
+    if (badge) badge.textContent = '0';
+  } else if (url) {
+    if (!selected.has(url)) selected.set(url, 0);
+    if (el) {
+      el.classList.add('selected');
+      const badge = el.querySelector('.badge');
+      if (badge) badge.textContent = '…';
+    }
+  }
+  renumberSelected();
+  updateSelBar();
+  updatePlayBtn();
+}
+
+function selectRange(fromIdx, toIdx) {
+  const a = Math.max(0, Math.min(fromIdx, toIdx));
+  const b = Math.min(filtered.length - 1, Math.max(fromIdx, toIdx));
+  if (b < 0 || a >= filtered.length) return;
+  for (let j = a; j <= b; j++) {
+    const u = filtered[j];
+    if (u == null) continue;
+    if (!selected.has(u)) selected.set(u, 0);
+    const el = document.getElementById(`t-${j}`);
+    if (el) el.classList.add('selected');
+  }
   renumberSelected();
   updateSelBar();
   updatePlayBtn();
@@ -780,7 +926,14 @@ function renumberSelected() {
   for (const [url] of selected) {
     n++; selected.set(url, n);
     const idx = filteredIndex.get(url);
-    if (idx > -1) { const el = document.getElementById(`t-${idx}`); if (el) el.querySelector('.badge').textContent = n; }
+    if (idx > -1) {
+      const el = document.getElementById(`t-${idx}`);
+      if (el) {
+        el.querySelector('.badge').textContent = n;
+        const name = getNameForURL(url);
+        el.setAttribute('aria-label', `${name}, selected ${n}`);
+      }
+    }
   }
 }
 
@@ -788,17 +941,19 @@ function toggleSelectMode() {
   selectMode = !selectMode;
   document.body.classList.toggle('sel-mode', selectMode);
   $('selectBtn').classList.toggle('active', selectMode);
+  $('selectBtn').setAttribute('aria-pressed', selectMode ? 'true' : 'false');
   $('selectBtn').textContent = selectMode ? 'Selecting...' : 'Select';
-  if (!selectMode) selected.clear();
+  if (!selectMode) { selected.clear(); selectAnchorUrl = null; }
   updatePlayBtn();
   buildGrid();
   updateSelBar();
 }
 
 function exitSelectMode() {
-  selected.clear(); selectMode = false;
+  selected.clear(); selectMode = false; selectAnchorUrl = null;
   document.body.classList.remove('sel-mode', 'has-sel-bar');
   $('selectBtn').classList.remove('active');
+  $('selectBtn').setAttribute('aria-pressed', 'false');
   $('selectBtn').textContent = 'Select';
   updatePlayBtn();
   buildGrid();
@@ -812,9 +967,40 @@ function updateSelBar() {
 }
 
 // ===== IMAGE MODAL =====
-let zoomLevel = 1;
-function resetZoom() { zoomLevel = 1; $('modalImg').style.transform = ''; $('zoomLevel').textContent = '100%'; }
-function applyZoom(delta) { zoomLevel = Math.max(0.25, Math.min(5, zoomLevel + delta)); $('modalImg').style.transform = `scale(${zoomLevel})`; $('zoomLevel').textContent = Math.round(zoomLevel * 100) + '%'; }
+// Zoom + pan (Pinterest/power-viewer style): scale from centre, drag when zoomed in
+let zoomLevel = 1, panX = 0, panY = 0, panDragging = false;
+let panStartX = 0, panStartY = 0, panOriginX = 0, panOriginY = 0;
+
+function clampPan() {
+  if (zoomLevel <= 1) { panX = 0; panY = 0; return; }
+  const el = $('modalImg');
+  const maxX = (el.clientWidth * (zoomLevel - 1)) / 2;
+  const maxY = (el.clientHeight * (zoomLevel - 1)) / 2;
+  panX = Math.max(-maxX, Math.min(maxX, panX));
+  panY = Math.max(-maxY, Math.min(maxY, panY));
+}
+
+function applyTransform() {
+  clampPan();
+  const el = $('modalImg');
+  const modal = $('modal');
+  const scaled = zoomLevel !== 1 || panX !== 0 || panY !== 0;
+  el.style.transform = scaled ? `translate(${panX}px, ${panY}px) scale(${zoomLevel})` : '';
+  modal.classList.toggle('zoomed', zoomLevel > 1);
+  modal.classList.toggle('panning', panDragging && zoomLevel > 1);
+  $('zoomLevel').textContent = Math.round(zoomLevel * 100) + '%';
+}
+
+function resetZoom() {
+  zoomLevel = 1; panX = 0; panY = 0; panDragging = false;
+  applyTransform();
+}
+
+function applyZoom(delta) {
+  zoomLevel = Math.max(0.25, Math.min(5, zoomLevel + delta));
+  if (zoomLevel <= 1) { panX = 0; panY = 0; }
+  applyTransform();
+}
 
 function getImageIndex(filteredIdx) {
   // Map filtered index to image-only index for modal navigation
@@ -856,6 +1042,51 @@ $('modalClose').addEventListener('click', closeModal);
 $('modalPrev').addEventListener('click', () => modalNav(-1));
 $('modalNext').addEventListener('click', () => modalNav(1));
 $('modal').addEventListener('click', e => { if (e.target === $('modal')) closeModal(); });
+
+// Wheel zoom over the modal (not chrome)
+$('modal').addEventListener('wheel', e => {
+  if (!$('modal').classList.contains('open')) return;
+  if (e.target.closest('.slideshow-bar, .zoom-controls, .nav, .close')) return;
+  e.preventDefault();
+  applyZoom(e.deltaY < 0 ? 0.25 : -0.25);
+}, { passive: false });
+
+// Drag-to-pan when zoomed in
+(function bindPan() {
+  const img = $('modalImg');
+  img.addEventListener('pointerdown', e => {
+    if (zoomLevel <= 1) return;
+    if (e.button !== undefined && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    panDragging = true;
+    panStartX = e.clientX; panStartY = e.clientY;
+    panOriginX = panX; panOriginY = panY;
+    try { img.setPointerCapture(e.pointerId); } catch (_) {}
+    applyTransform();
+  });
+  img.addEventListener('pointermove', e => {
+    if (!panDragging) return;
+    panX = panOriginX + (e.clientX - panStartX);
+    panY = panOriginY + (e.clientY - panStartY);
+    applyTransform();
+  });
+  function endPan(e) {
+    if (!panDragging) return;
+    panDragging = false;
+    try { img.releasePointerCapture(e.pointerId); } catch (_) {}
+    applyTransform();
+  }
+  img.addEventListener('pointerup', endPan);
+  img.addEventListener('pointercancel', endPan);
+  // Double-click: 100% ↔ 200%
+  img.addEventListener('dblclick', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (zoomLevel === 1) applyZoom(1);
+    else resetZoom();
+  });
+})();
 
 // ===== SLIDESHOW =====
 let ssRunning = false, ssTimer = null, ssSpeed = 3000;
@@ -925,6 +1156,7 @@ function stopPlayback() {
 function updatePPBtn() {
   const paused = $('playerVideo').paused;
   $('playPauseBtn').textContent = paused ? '►' : '❚❚';
+  $('playPauseBtn').setAttribute('aria-label', paused ? 'Play' : 'Pause');
   $('playerOverlay').classList.toggle('playing', !paused);
   if (paused) { showControls(); clearTimeout(controlsTimer); } else { showControls(); }
 }
@@ -933,6 +1165,12 @@ _playerVideo.addEventListener('timeupdate', () => {
   if (_playerVideo.duration) {
     _seekFill.style.width = (_playerVideo.currentTime / _playerVideo.duration * 100) + '%';
     _timeDisplay.textContent = formatTime(_playerVideo.currentTime) + ' / ' + formatTime(_playerVideo.duration);
+    const seekBar = $('seekBar');
+    if (seekBar) {
+      const pct = Math.round(_playerVideo.currentTime / _playerVideo.duration * 100);
+      seekBar.setAttribute('aria-valuenow', String(pct));
+      seekBar.setAttribute('aria-valuetext', formatTime(_playerVideo.currentTime) + ' of ' + formatTime(_playerVideo.duration));
+    }
     if (abA !== null && abB !== null && _playerVideo.currentTime >= abB) _playerVideo.currentTime = abA;
   }
 });
@@ -978,9 +1216,27 @@ $('playerVideo').addEventListener('canplay', () => $('spinner').classList.remove
 
 $('backBtn').addEventListener('click', stopPlayback);
 $('centerPlayBtn').addEventListener('click', e => { e.stopPropagation(); $('playerVideo').play().catch(()=>{}); });
+$('centerPlayBtn').addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    e.stopPropagation();
+    $('playerVideo').play().catch(()=>{});
+  }
+});
 $('playPauseBtn').addEventListener('click', () => { $('playerVideo').paused ? $('playerVideo').play().catch(()=>{}) : $('playerVideo').pause(); });
 $('prevBtn').addEventListener('click', () => { if (!playlist.length) return; currentIdx = (currentIdx - 1 + playlist.length) % playlist.length; loadVideo(); });
 $('nextBtn').addEventListener('click', () => { if (!playlist.length) return; currentIdx = (currentIdx + 1) % playlist.length; loadVideo(); });
+
+function seekTo(seconds) {
+  const v = _playerVideo;
+  if (!v.duration || !isFinite(v.duration)) return;
+  v.currentTime = Math.max(0, Math.min(v.duration, seconds));
+}
+function seekBy(delta) {
+  const v = _playerVideo;
+  if (!v.duration || !isFinite(v.duration)) return;
+  seekTo(v.currentTime + delta);
+}
 
 // Loop
 function updateLoopBtn() { const labels = ['loop off', 'loop all', 'loop 1']; $('loopBtn').textContent = labels[loopMode]; $('loopBtn').classList.toggle('active', loopMode > 0); }
@@ -1046,7 +1302,18 @@ $('playerOverlay').addEventListener('touchend', e => {
 
 // Volume
 $('muteBtn').addEventListener('click', () => { $('playerVideo').muted = !$('playerVideo').muted; $('muteBtn').classList.toggle('active', $('playerVideo').muted); updateVolFill(); });
-function updateVolFill() { const vol = _playerVideo.muted ? 0 : _playerVideo.volume; _volFill.style.width = (vol * 100) + '%'; _muteBtn.textContent = vol === 0 ? '♪̸' : vol < 0.5 ? '♪' : '♫'; _muteBtn.classList.toggle('active', _playerVideo.muted || vol === 0); }
+function updateVolFill() {
+  const vol = _playerVideo.muted ? 0 : _playerVideo.volume;
+  _volFill.style.width = (vol * 100) + '%';
+  _muteBtn.textContent = vol === 0 ? '♪̸' : vol < 0.5 ? '♪' : '♫';
+  _muteBtn.classList.toggle('active', _playerVideo.muted || vol === 0);
+  _muteBtn.setAttribute('aria-label', _playerVideo.muted || vol === 0 ? 'Unmute' : 'Mute');
+  const volSlider = $('volSlider');
+  if (volSlider) {
+    volSlider.setAttribute('aria-valuenow', String(Math.round(vol * 100)));
+    volSlider.setAttribute('aria-valuetext', Math.round(vol * 100) + '%');
+  }
+}
 $('volSlider').addEventListener('click', e => { const rect = $('volSlider').getBoundingClientRect(); const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)); $('playerVideo').volume = pct; $('playerVideo').muted = pct === 0; updateVolFill(); });
 let volDragging = false;
 function volFromEvent(e) { const rect = $('volSlider').getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)); }
@@ -1075,7 +1342,11 @@ $('typeFilter').addEventListener('click', e => {
   const btn = e.target.closest('.tf-btn');
   if (!btn) return;
   activeFilter = btn.dataset.filter;
-  $('typeFilter').querySelectorAll('.tf-btn').forEach(b => b.classList.toggle('active', b === btn));
+  $('typeFilter').querySelectorAll('.tf-btn').forEach(b => {
+    const on = b === btn;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
   render();
 });
 
@@ -1087,9 +1358,9 @@ async function openFolder() {
       for (const [, meta] of fileMeta) releaseMetaUrls(meta);
       allFiles.length = 0; filtered.length = 0;
       fileMeta.clear(); urlToPath.clear();
-      selected.clear(); selectMode = false;
+      selected.clear(); selectMode = false; selectAnchorUrl = null;
       sourceDirHandle = newHandle;
-      $('loadingMsg').classList.add('visible'); $('loadingMsg').textContent = 'loading...'; $('emptyMsg').style.display = 'none';
+      $('loadingMsg').classList.add('visible'); $('loadingMsg').textContent = 'loading...'; $('emptyMsg').classList.remove('visible'); $('emptyMsg').style.display = 'none';
       // { file, path } with path relative to sourceDirHandle (root files: "name.jpg", nested: "sub/name.jpg")
       const files = [];
       async function readDir(dirHandle, relPath) {
@@ -1169,7 +1440,7 @@ $('moveExistBtn').addEventListener('click', async () => {
 
 $('delBtn').addEventListener('click', () => {
   if (!selected.size) return;
-  if (!confirm(`Remove ${selected.size} file${selected.size !== 1 ? 's' : ''} from view?`)) return;
+  if (!confirm(`Hide ${selected.size} file${selected.size !== 1 ? 's' : ''} from this view?\n\nFiles stay on disk.`)) return;
   for (const url of [...selected.keys()]) dropFileFromMemory(url);
   exitSelectMode(); render();
   showToast('Removed from view', 'success');
@@ -1258,14 +1529,40 @@ document.addEventListener('drop', e => {
 });
 
 // ===== THEME =====
-function toggleTheme() {
-  document.body.classList.toggle('dark');
-  const isDark = document.body.classList.contains('dark');
-  $('themeBtn').textContent = isDark ? 'light' : 'dark';
-  localStorage.setItem('theme', isDark ? 'dark' : 'light');
+function applyTheme(dark, persist) {
+  document.documentElement.classList.toggle('dark', dark);
+  document.body.classList.toggle('dark', dark);
+  $('themeBtn').textContent = dark ? 'light' : 'dark';
+  if (persist) {
+    try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+  }
 }
-if (localStorage.getItem('theme') === 'dark') { document.body.classList.add('dark'); $('themeBtn').textContent = 'light'; }
+
+function currentThemeIsDark() {
+  return document.documentElement.classList.contains('dark');
+}
+
+function toggleTheme() {
+  applyTheme(!currentThemeIsDark(), true);
+}
+
+// Sync body class + button with the pre-paint html.dark decision
+applyTheme(currentThemeIsDark(), false);
 $('themeBtn').addEventListener('click', toggleTheme);
+
+// Follow OS theme only when the user has not chosen an override
+(function bindSystemTheme() {
+  if (!window.matchMedia) return;
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  const onChange = () => {
+    let saved = null;
+    try { saved = localStorage.getItem('theme'); } catch (e) {}
+    if (saved === 'dark' || saved === 'light') return;
+    applyTheme(mq.matches, false);
+  };
+  if (mq.addEventListener) mq.addEventListener('change', onChange);
+  else if (mq.addListener) mq.addListener(onChange);
+})();
 
 // ===== KEYBOARD SHORTCUTS =====
 document.addEventListener('keydown', e => {
@@ -1276,14 +1573,31 @@ document.addEventListener('keydown', e => {
     if (e.key === 'ArrowRight') modalNav(1);
     if (e.key === 'ArrowUp') { e.preventDefault(); applyZoom(0.25); }
     if (e.key === 'ArrowDown') { e.preventDefault(); applyZoom(-0.25); }
+    if (e.key === '0') { e.preventDefault(); resetZoom(); }
     return;
   }
   // Video player
   if ($('playerOverlay').classList.contains('visible')) {
     if (e.key === 'Escape') stopPlayback();
     if (e.key === ' ') { e.preventDefault(); $('playerVideo').paused ? $('playerVideo').play().catch(()=>{}) : $('playerVideo').pause(); }
-    if (e.key === 'ArrowLeft') { if (!playlist.length) return; currentIdx = (currentIdx - 1 + playlist.length) % playlist.length; loadVideo(); }
-    if (e.key === 'ArrowRight') { if (!playlist.length) return; currentIdx = (currentIdx + 1) % playlist.length; loadVideo(); }
+    // ←/→ seek within clip; Shift+←/→ previous/next video
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      const dir = e.key === 'ArrowRight' ? 1 : -1;
+      if (e.shiftKey) {
+        if (!playlist.length) return;
+        currentIdx = (currentIdx + dir + playlist.length) % playlist.length;
+        loadVideo();
+      } else {
+        seekBy(dir * 5);
+      }
+    }
+    if (e.key === 'Home') { e.preventDefault(); seekTo(0); }
+    if (e.key === 'End') {
+      e.preventDefault();
+      const v = _playerVideo;
+      if (v.duration && isFinite(v.duration)) seekTo(Math.max(0, v.duration - 0.05));
+    }
     if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); }
     if (e.key === 'm' || e.key === 'M') { e.preventDefault(); $('playerVideo').muted = !$('playerVideo').muted; $('muteBtn').classList.toggle('active', $('playerVideo').muted); updateVolFill(); }
     if (e.key === '[') { e.preventDefault(); setPointA(); }
@@ -1358,6 +1672,19 @@ window.addEventListener('beforeunload', () => {
   urlToPath.clear();
   fileMeta.clear();
 });
+
+// Landing: surface FS API availability once
+(function initLandingNotes() {
+  const note = document.getElementById('fsApiNote');
+  if (!note) return;
+  if (window.showDirectoryPicker) {
+    note.textContent = 'File System Access available.';
+  } else if (location.protocol === 'file:') {
+    note.textContent = 'You are on file:// — Open Folder will be limited; prefer http://localhost.';
+  } else {
+    note.textContent = 'This browser may lack folder write APIs — drag-drop still browses.';
+  }
+})();
 
 render();
 </script>
