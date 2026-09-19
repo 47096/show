@@ -16,6 +16,7 @@ A minimal media browser for images and videos. Single HTML file, no server, no u
 - **Keyboard-first** — shortcuts overlay (`?`)
 - **Drag & drop** — files or folders, recursive scan
 - **Large folders** — batched grid + video thumbs as object URLs (not base64)
+- **UI** — readable type scale, path labels on hover, teaching empty states, clear select/delete hierarchy
 
 ## Supported formats
 
@@ -62,9 +63,12 @@ Opening `index.html` via `file://` can browse after drag-drop, but folder write 
 
 ## Design
 
-- Font: IBM Plex Mono
+- **Chrome / controls / paths:** IBM Plex Mono
+- **Prose** (landing, empty states, toasts): IBM Plex Sans
 - Accent: `#3b82f6`
-- Dark theme from OS preference when unset
+- Theme follows `prefers-color-scheme` when unset; toggle saved in `localStorage`
+- Masonry grid (`column-width: 220px`), true aspect ratios
+- Desktop-first header: primary tools left, quieter sort/theme/play right
 - All client-side, zero dependencies
 - Single `index.html`
 
