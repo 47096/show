@@ -123,66 +123,207 @@
   .gallery-view { display: none; }
   .gallery-view.visible { display: block; }
 
-  /* Header */
-  .header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border2); position: sticky; top: 0; background: var(--bg); z-index: 50; flex-wrap: wrap; }
-  .header-primary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+  /* Header — instrument strip */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--line, var(--border2));
+    position: sticky;
+    top: 0;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px) saturate(1.2);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    z-index: 50;
+    flex-wrap: wrap;
+  }
+  .header-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-shrink: 0;
+    max-width: 200px;
+    min-width: 0;
+  }
+  .header-brand .mark {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: 0.02em;
+  }
+  .header-brand .sep { color: var(--text3); font-size: 12px; }
+  .header-brand .folder {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--text3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .header-primary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    min-width: 0;
+    flex: 1;
+  }
   .header-secondary {
-    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
     margin-left: auto;
     padding-left: 12px;
-    border-left: 1px solid var(--border2);
+    border-left: 1px solid var(--line, var(--border2));
   }
-  .header-search { flex: 1; min-width: 160px; max-width: 360px; }
-  .header-search input { width: 100%; padding: 6px 0; border: none; border-bottom: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; font-size: 13px; outline: none; background: transparent; color: var(--text); }
-  .header-search input:focus { border-bottom-color: var(--accent); }
+  .header-search {
+    flex: 1 1 200px;
+    min-width: 180px;
+    max-width: 360px;
+  }
+  .header-search input {
+    width: 100%;
+    height: 32px;
+    padding: 0 12px 0 32px;
+    border: 1px solid var(--line, var(--border2));
+    border-radius: 6px;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 13px;
+    outline: none;
+    background: var(--bg2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236e6e6e' stroke-width='1.75' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6'/%3E%3Cpath d='M16 16l4 4'/%3E%3C/svg%3E") no-repeat 10px center;
+    color: var(--text);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .header-search input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
   .header-search input::placeholder { color: var(--text3); }
-  .header-count { font-size: 12px; color: var(--text3); white-space: nowrap; }
-  .header-sort { display: flex; align-items: center; gap: 6px; }
-  .sort-label { font-size: 12px; color: var(--text3); white-space: nowrap; }
-  .header-sort select { padding: 5px 8px; border: 1px solid var(--border2); background: var(--bg); font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--text2); cursor: pointer; outline: none; border-radius: 0; -webkit-appearance: none; appearance: none; padding-right: 20px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23999'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 6px center; }
-  .sort-dir { padding: 5px 8px; border: 1px solid var(--border2); background: var(--bg); font-family: 'IBM Plex Mono', monospace; font-size: 12px; cursor: pointer; color: var(--text2); transition: all 0.15s; }
-  .sort-dir:hover { border-color: var(--text); color: var(--text); }
-  .sort-random { padding: 5px 10px; border: 1px solid var(--border2); background: var(--bg); font-family: 'IBM Plex Mono', monospace; font-size: 12px; cursor: pointer; color: var(--text3); transition: all 0.15s; }
-  .sort-random:hover { border-color: var(--accent); color: var(--accent); }
-  .dark .header-sort select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%23888'/%3E%3C/svg%3E"); }
-  .header-actions { display: flex; gap: 6px; }
-  .btn { padding: 6px 12px; border: 1px solid var(--border); background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.15s; color: var(--text); }
+  .dark .header-search input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8a8a' stroke-width='1.75' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='6'/%3E%3Cpath d='M16 16l4 4'/%3E%3C/svg%3E");
+  }
+  .header-count {
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--text3);
+    white-space: nowrap;
+  }
+  .header-sort { display: flex; align-items: center; gap: 2px; }
+  .sort-label { display: none; }
+  .header-sort select {
+    height: 32px;
+    padding: 0 22px 0 8px;
+    border: none;
+    background: transparent;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--text2);
+    cursor: pointer;
+    outline: none;
+    border-radius: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%236e6e6e'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 6px center;
+  }
+  .header-sort select:hover { color: var(--text); }
+  .header-sort select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .dark .header-sort select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5'%3E%3Cpath d='M0 0l4 5 4-5z' fill='%238a8a8a'/%3E%3C/svg%3E"); }
+  .sort-dir, .sort-random {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    min-width: 32px;
+    padding: 0 8px;
+    border: none;
+    background: transparent;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text3);
+    transition: color 0.15s, background 0.15s;
+  }
+  .sort-dir:hover, .sort-random:hover { color: var(--text); background: var(--bg2); }
+  .sort-random .ctrl-label { margin-left: 2px; }
+  .header-actions { display: flex; align-items: center; gap: 2px; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    background: transparent;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--text);
+  }
   .btn:hover { border-color: var(--text); }
-  /* Secondary header tools: quieter until hover/focus */
+  /* Secondary header tools: borderless until hover */
   .header-secondary .btn {
-    border-color: var(--border2);
+    border-color: transparent;
     color: var(--text2);
   }
   .header-secondary .btn:hover {
-    border-color: var(--text);
+    border-color: transparent;
     color: var(--text);
+    background: var(--bg2);
   }
   .header-secondary .btn:disabled {
-    opacity: 0.45;
+    opacity: 0.4;
     cursor: default;
   }
   .header-secondary .btn:disabled:hover {
-    border-color: var(--border2);
+    border-color: transparent;
     color: var(--text2);
+    background: transparent;
   }
-  .header-primary .btn { border-color: var(--text); color: var(--text); }
-  .header-primary .btn:hover { background: var(--text); color: var(--bg); }
+  .header-primary > .btn { border-color: var(--line, var(--border)); color: var(--text); }
+  .header-primary > .btn:hover { background: var(--text); color: var(--bg); border-color: var(--text); }
   .btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
   .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
   .btn.primary:hover { opacity: 0.85; }
   .btn.danger { border-color: var(--border); color: var(--text2); }
   .btn.danger:hover { border-color: var(--danger); color: var(--danger); }
-  /* Only irreversible disk delete is filled danger */
   .btn.danger-solid { background: var(--danger); color: #fff; border-color: var(--danger); }
   .btn.danger-solid:hover { opacity: 0.9; background: var(--danger); color: #fff; }
   .sel-bar .spacer { flex: 1; min-width: 8px; }
 
-  /* Type filter */
-  .type-filter { display: flex; gap: 0; }
-  .type-filter .tf-btn { padding: 6px 10px; border: 1px solid var(--border); background: transparent; font-family: 'IBM Plex Mono', monospace; font-size: 12px; cursor: pointer; color: var(--text2); transition: all 0.15s; margin-left: -1px; }
-  .type-filter .tf-btn:first-child { margin-left: 0; }
-  .type-filter .tf-btn:hover { border-color: var(--text); }
-  .type-filter .tf-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  /* Type filter — type-led segments, no boxes */
+  .type-filter { display: flex; align-items: center; gap: 2px; }
+  .type-filter .tf-btn {
+    height: 32px;
+    padding: 0 10px;
+    border: none;
+    background: transparent;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--text2);
+    transition: color 0.15s;
+    position: relative;
+  }
+  .type-filter .tf-btn::after {
+    content: '';
+    position: absolute;
+    left: 8px; right: 8px; bottom: 4px;
+    height: 2px;
+    background: transparent;
+    border-radius: 1px;
+  }
+  .type-filter .tf-btn:hover { color: var(--text); }
+  .type-filter .tf-btn.active { color: var(--text); font-weight: 500; }
+  .type-filter .tf-btn.active::after { background: var(--text); }
+  .header-identity-tools { display: flex; align-items: center; gap: 10px; min-width: 0; flex-wrap: wrap; }
 
   /* Selection bar */
   .sel-bar { display: none; align-items: center; gap: 10px; padding: 10px 16px; border-top: 1px solid var(--accent); background: var(--bg2); font-size: 13px; position: fixed; bottom: 0; left: 0; right: 0; z-index: 80; box-shadow: 0 -4px 16px rgba(0,0,0,0.08); }
@@ -489,8 +630,9 @@
     /* Gallery touch targets */
     .btn, .tf-btn, .sort-dir, .sort-random { padding: 10px 14px; min-height: 44px; font-size: 13px; }
     .drop-zone-btn { padding: 14px 32px; font-size: 14px; }
-    .header-search input { padding: 10px 0; font-size: 14px; }
-    .header-sort select { padding: 10px 12px; font-size: 13px; }
+    .header-search input { height: 40px; font-size: 14px; }
+    .header-sort select { height: 40px; font-size: 13px; }
+    .btn, .tf-btn, .sort-dir, .sort-random { min-height: 40px; height: 40px; font-size: 13px; }
   }
 
   /* Drop overlay */
@@ -563,6 +705,11 @@
   .btn .icon { width: 14px; height: 14px; }
   .ctrl-label { font-family: 'IBM Plex Mono', monospace; font-size: 11px; margin-left: 2px; }
   .shortcuts-close { display: inline-flex; align-items: center; justify-content: center; }
+  .visually-hidden {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
 
 </style>
 </head>
@@ -619,15 +766,25 @@
 <!-- GALLERY -->
 <div class="gallery-view" id="galleryView">
   <div class="header">
+    <div class="header-brand" id="headerBrand">
+      <span class="mark">show</span>
+      <span class="sep" id="headerBrandSep" hidden>·</span>
+      <span class="folder" id="headerFolder" hidden title=""></span>
+    </div>
     <div class="header-primary">
-      <button class="btn" id="openFolderHeader" aria-label="Open folder">Open Folder</button>
-      <div class="header-search"><input type="text" id="search" placeholder="search path or name…" aria-label="Search files by path or name"></div>
-      <div class="header-count" id="count" aria-live="polite" aria-atomic="true">0 files</div>
+      <button class="btn icon-btn" id="openFolderHeader" aria-label="Open folder" title="Open folder">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-move"></use></svg>
+        <span>Open</span>
+      </button>
+      <div class="header-search">
+        <input type="text" id="search" placeholder="search path or name…" aria-label="Search files by path or name">
+      </div>
       <div class="type-filter" id="typeFilter" role="group" aria-label="Filter by media type">
         <button class="tf-btn active" data-filter="all" aria-pressed="true">All</button>
         <button class="tf-btn" data-filter="image" aria-pressed="false">Images</button>
         <button class="tf-btn" data-filter="video" aria-pressed="false">Videos</button>
       </div>
+      <div class="header-count" id="count" aria-live="polite" aria-atomic="true">0 files</div>
       <button class="btn" id="selectBtn" aria-label="Toggle select mode" aria-pressed="false">Select</button>
     </div>
     <div class="header-secondary">
@@ -641,13 +798,20 @@
           <option value="duration">duration</option>
           <option value="resolution">resolution</option>
         </select>
-        <button class="sort-dir icon-btn" id="sortDir" title="Toggle sort direction" aria-label="Toggle sort direction"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev-up"></use></svg></button>
-        <button class="sort-random icon-btn" id="sortRandom" aria-label="Randomize order"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-random"></use></svg><span class="ctrl-label">rand</span></button>
+        <button class="sort-dir icon-btn" id="sortDir" title="Toggle sort direction" aria-label="Sort ascending"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev-up"></use></svg></button>
+        <button class="sort-random icon-btn" id="sortRandom" aria-label="Randomize order" title="Randomize order"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-random"></use></svg></button>
       </div>
       <div class="header-actions">
-        <button class="btn icon-btn" id="themeBtn" aria-label="Toggle dark theme"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-moon"></use></svg><span id="themeBtnLabel">dark</span></button>
-        <button class="btn icon-btn" id="slideshowBtn" aria-label="Start image slideshow"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-slideshow"></use></svg><span>Slideshow</span></button>
-        <button class="btn icon-btn" id="playBtn" disabled aria-label="Play videos"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg><span>Play</span></button>
+        <button class="btn icon-btn" id="themeBtn" aria-label="Toggle dark theme" title="Theme">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-moon"></use></svg>
+          <span id="themeBtnLabel" class="visually-hidden">dark</span>
+        </button>
+        <button class="btn icon-btn" id="slideshowBtn" aria-label="Start image slideshow" title="Slideshow">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-slideshow"></use></svg>
+        </button>
+        <button class="btn icon-btn" id="playBtn" disabled aria-label="Play videos" title="Play videos">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-play"></use></svg>
+        </button>
       </div>
     </div>
   </div>
@@ -1053,8 +1217,25 @@ function formatCountLabel() {
   const n = filtered.length;
   const total = allFiles.length;
   const filtering = activeFilter !== 'all' || $('search').value.trim() !== '';
-  if (filtering && total > 0 && n !== total) return `${n} of ${total} files`;
+  if (filtering && total > 0 && n !== total) return `${n} of ${total}`;
   return `${n} file${n !== 1 ? 's' : ''}`;
+}
+
+function setFolderIdentity(name) {
+  const folder = $('headerFolder');
+  const sep = $('headerBrandSep');
+  if (!folder || !sep) return;
+  if (name) {
+    folder.hidden = false;
+    sep.hidden = false;
+    folder.textContent = name;
+    folder.title = name;
+  } else {
+    folder.hidden = true;
+    sep.hidden = true;
+    folder.textContent = '';
+    folder.title = '';
+  }
 }
 
 function updateEmptyState(hasFiles, query, filteredCount) {
@@ -1731,6 +1912,7 @@ async function openFolder() {
       fileMeta.clear(); urlToPath.clear();
       selected.clear(); selectMode = false; selectAnchorUrl = null;
       sourceDirHandle = newHandle;
+      setFolderIdentity(sourceDirHandle ? sourceDirHandle.name : '');
       $('loadingMsg').classList.add('visible'); $('loadingMsg').textContent = 'loading...'; $('emptyMsg').classList.remove('visible'); $('emptyMsg').style.display = 'none';
       // { file, path } with path relative to sourceDirHandle (root files: "name.jpg", nested: "sub/name.jpg")
       const files = [];
@@ -1757,7 +1939,17 @@ async function openFolder() {
 $('openBtn').addEventListener('click', openFolder);
 $('openFolderHeader').addEventListener('click', openFolder);
 $('dropZone').addEventListener('click', e => { if (e.target === $('dropZone')) openFolder(); });
-$('folderInput').addEventListener('change', () => { if ($('folderInput').files.length) addFiles($('folderInput').files); $('folderInput').value = ''; });
+$('folderInput').addEventListener('change', () => {
+  if ($('folderInput').files.length) {
+    addFiles($('folderInput').files);
+    if (!sourceDirHandle) {
+      const rel = $('folderInput').files[0]?.webkitRelativePath || '';
+      const root = rel.split('/')[0];
+      setFolderIdentity(root || 'dropped files');
+    }
+  }
+  $('folderInput').value = '';
+});
 
 // ===== SELECTION ACTIONS =====
 $('selectBtn').addEventListener('click', toggleSelectMode);
@@ -1894,6 +2086,7 @@ document.addEventListener('drop', e => {
   entries.forEach(entry => readEntry(entry, '', () => {
     if (--p === 0) {
       addFiles(allDropped);
+      if (!sourceDirHandle) setFolderIdentity('dropped files');
       if (readErrors > 0) showToast(`Skipped ${readErrors} unreadable file${readErrors !== 1 ? 's' : ''}`, 'error');
     }
   }));
@@ -1909,6 +2102,8 @@ function applyTheme(dark, persist) {
   if (btn) {
     const use = btn.querySelector('use');
     if (use) use.setAttribute('href', dark ? '#i-sun' : '#i-moon');
+    btn.title = dark ? 'Switch to light' : 'Switch to dark';
+    btn.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
   }
   if (persist) {
     try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
