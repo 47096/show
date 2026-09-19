@@ -2,6 +2,10 @@
 
 A minimal media browser for images and videos. Single HTML file, no server, no uploads — everything stays local.
 
+
+
+
+
 **Live:** [47096.github.io/show](https://47096.github.io/show/)
 
 ## Features
