@@ -6,17 +6,17 @@ A minimal media browser for images and videos. Single HTML file, no server, no u
 
 ## Features
 
-- **Unified gallery** — images and videos in one Pinterest-style masonry grid (true aspect ratios)
-- **Image viewer** — zoom (25%–500%), drag-to-pan, double-click 100%↔200%, slideshow
+- **Unified gallery** — images and videos in one masonry wall (true aspect ratios, generous gutters)
+- **Image viewer** — dark theatre chrome; zoom 25–500%, drag-to-pan, double-click 100%↔200%, slideshow
 - **Video player** — keyboard seek (±5s), Shift+arrows for clips, loop modes, A-B repeat, speed, shuffle, PiP, fullscreen
 - **Type filter** — All / Images / Videos
 - **Search & sort** — path + name, date, size, type, duration, resolution
 - **Select mode** — shift+click ranges; move to folder; quiet “remove from view” vs filled “delete from disk” (path-aware; nested folders work)
 - **Theme** — follows `prefers-color-scheme`; manual toggle saved in `localStorage`
-- **Keyboard-first** — shortcuts overlay (`?`)
+- **Keyboard-first** — shortcuts overlay (`?`); inline SVG icons on chrome
 - **Drag & drop** — files or folders, recursive scan
 - **Large folders** — batched grid + video thumbs as object URLs (not base64)
-- **UI** — readable type scale, path labels on hover, teaching empty states, clear select/delete hierarchy
+- **UI** — instrument header (folder identity, inset search), teaching empty states, light-table selection marks
 
 ## Supported formats
 
@@ -64,11 +64,14 @@ Opening `index.html` via `file://` can browse after drag-drop, but folder write 
 ## Design
 
 - **Chrome / controls / paths:** IBM Plex Mono
-- **Prose** (landing, empty states, toasts): IBM Plex Sans
-- Accent: `#3b82f6`
-- Theme follows `prefers-color-scheme` when unset; toggle saved in `localStorage`
-- Masonry grid (`column-width: 220px`), true aspect ratios
-- Desktop-first header: primary tools left, quieter sort/theme/play right
+- **Prose** (landing copy, empty states, toasts): IBM Plex Sans
+- **Icons:** inline SVG (24 viewBox, ~1.75 stroke) — no unicode control glyphs
+- **Accent:** `#3b82f6`; danger for permanent delete only
+- **Theme:** OS preference when unset; toggle saved in `localStorage`
+- **Media wall:** masonry `column-width: 220px`, ~10px gutters, no card shells; hover = inset hairline (no lift/shadow); select = accent ring + order chips
+- **Header:** instrument strip (~48px) with `show · folder`, inset search, underline type filter, quieter secondary tools
+- **Image viewer:** always dark theatre backdrop; control language matches the video player
+- **Landing:** full-viewport stage, ghost masonry, large wordmark — no dashed upload hero
 - All client-side, zero dependencies
 - Single `index.html`
 
