@@ -6,6 +6,14 @@ https://github.com/user-attachments/assets/e9312a86-b8fe-471b-95fe-828b79271bfb
 
 **Live:** [47096.github.io/show](https://47096.github.io/show/)
 
+## Use cases
+
+1. **Photo shoot triage** — open a card export, zoom keepers, shift+click ranges, move selects into another folder.
+2. **Video rough review** — play takes, A-B loop, change speed, seek by keyboard, playlist from selection order.
+3. **Disk cleanup** — sort by size/date, delete or hide files with path-aware confirmations before backup.
+4. **Local delivery packing** — search and move a curated set into a share folder; nothing uploads.
+5. **Private review** — browse sensitive media entirely on-device; no account, no server.
+
 ## Features
 
 - **Unified gallery** — images and videos in one masonry wall (true aspect ratios, generous gutters)
