@@ -13,7 +13,7 @@ A minimal media browser for images and videos. Single HTML file, no server, no u
 - **Dark mode** — toggle with localStorage persistence
 - **Keyboard navigation** — arrow keys, Enter/Space, shortcuts overlay (`?`)
 - **Drag & drop** — files or entire folders, recursive scan
-- **Virtual scroll** — smooth performance with large folders
+- **Virtual scroll** — smooth performance with large folders (video thumbs stored as object URLs, not base64)
 - **Mobile friendly** — touch targets, swipe navigation, responsive grid
 
 ## Supported formats

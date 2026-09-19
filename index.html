@@ -475,13 +475,25 @@ function addFiles(items) {
   loadVideoMetadata();
 }
 
+function revokeObjectUrlIfPresent(u) {
+  if (typeof u === 'string' && u.startsWith('blob:')) URL.revokeObjectURL(u);
+}
+
+function releaseMetaUrls(meta) {
+  if (!meta) return;
+  revokeObjectUrlIfPresent(meta.thumbUrl);
+  revokeObjectUrlIfPresent(meta.url);
+  meta.thumbUrl = null;
+}
+
 function dropFileFromMemory(url) {
   const idx = allFiles.indexOf(url);
   if (idx > -1) allFiles.splice(idx, 1);
   const path = urlToPath.get(url);
+  const meta = path != null ? fileMeta.get(path) : null;
   if (path != null) fileMeta.delete(path);
   urlToPath.delete(url);
-  URL.revokeObjectURL(url);
+  releaseMetaUrls(meta);
 }
 
 async function loadVideoMetadata() {
@@ -514,11 +526,18 @@ async function loadVideoMetadata() {
         v.currentTime = Math.min(1, (v.duration || 10) * 0.1);
         await new Promise(r => { v.addEventListener('seeked', r); v.addEventListener('error', r); });
         const scale = Math.min(1, 320 / (meta.videoWidth || 320));
-        const tw = Math.round(meta.videoWidth * scale), th = Math.round(meta.videoHeight * scale);
+        const tw = Math.max(1, Math.round((meta.videoWidth || 320) * scale));
+        const th = Math.max(1, Math.round((meta.videoHeight || 180) * scale));
         const c = document.createElement('canvas'); c.width = tw; c.height = th;
         c.getContext('2d').drawImage(v, 0, 0, tw, th);
-        meta.thumbUrl = c.toDataURL('image/jpeg', 0.7);
-        v.src = ''; // release video element
+        // Blob + object URL keeps gallery memory bounded vs base64 data URLs
+        const blob = await new Promise((resolve, reject) => {
+          c.toBlob(b => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/jpeg', 0.7);
+        });
+        revokeObjectUrlIfPresent(meta.thumbUrl);
+        meta.thumbUrl = URL.createObjectURL(blob);
+        v.removeAttribute('src');
+        v.load(); // release video element
         const card = getCardForUrl(url);
         if (card) {
           const img = card.querySelector('img');
@@ -1031,7 +1050,7 @@ async function openFolder() {
   if (window.showDirectoryPicker) {
     try {
       const newHandle = await window.showDirectoryPicker({ mode: 'readwrite', startIn: 'desktop' });
-      for (const [, meta] of fileMeta) URL.revokeObjectURL(meta.url);
+      for (const [, meta] of fileMeta) releaseMetaUrls(meta);
       allFiles.length = 0; filtered.length = 0;
       fileMeta.clear(); urlToPath.clear();
       selected.clear(); selectMode = false;
@@ -1301,7 +1320,7 @@ $('shortcutsOverlay').addEventListener('click', e => { if (e.target === $('short
 
 // ===== CLEANUP =====
 window.addEventListener('beforeunload', () => {
-  for (const [, meta] of fileMeta) URL.revokeObjectURL(meta.url);
+  for (const [, meta] of fileMeta) releaseMetaUrls(meta);
   urlToPath.clear();
   fileMeta.clear();
 });
